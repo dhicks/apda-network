@@ -1,0 +1,69 @@
+person_id
+AoSCategory
+  NULL = '1',
+  'LEMM' = '2',
+  'Value Theory' = '3',
+  'History and Traditions' = '4', 
+  'Science, Logic, and Math' = '5'
+primaryAoS
+   'Unknown 1' = '1', 
+   '19th / 20th 4' = '2', 
+	 'Action 2' = '3', 
+	 'Aesthetics 3' = '4', 
+	 'African 4' = '5', 
+	 'American (incl Latin American) 4' = '6', 
+	 'Analytic (History of) 4' = '8', 
+	 'Ancient 4' = '10', 
+	 'Applied Ethics (incl Bio and Medical) 3' = '11', 
+	 'Asian 4' = '12', 
+	 'Biology (incl Environmental) 5' = '13', 
+	 'Cognitive Science / Psychology / Neuroscience / Linguistics 5' = '14', 
+	 'Comparative 4' = '15', 
+	 'Continental (incl Phenomenology) 4' = '16', 
+	 'Decision Theory 5' = '17', 
+	 'Economics 5' = '18', 
+	 'Education 3' = '19', 
+	 'Epistemology 2' = '20', 
+	 'Ethics 3' = '21', 
+	 'Gender / Race / Sexuality / Disability Studies 3' = '22', 
+	 'German (incl Kant) 4' = '23', 
+	 'History (General) 4' = '24', 
+	 'Language 2' = '25', 
+	 'Law 3' = '26', 
+	 'Logic 5' = '27', 
+	 'Math 5' = '28', 
+	 'Medieval / Renaissance 4' = '29', 
+	 'Meta-Ethics 3' = '30', 
+	 'Metaphilosophy (incl Experimental) 2' = '31', 
+	 'Metaphysics 2' = '32', 
+	 'Mind 2' = '33', 
+	 'Modern 4' = '34', 
+	 'Physics 5' = '35', 
+	 'Religion 2' = '36', 
+	 'Science (General) 5' = '37', 
+	 'Social / Political 3' = '38', 
+	 'Technology 5' = '39', 
+	 'Value (General) 3' = '40', 
+	 'Other 1' = '41'
+graduation_year
+university_id
+university_name
+placement_year
+placementunit_id
+placement_university
+position_type
+  'Tenure-Track' = '1'
+  'Lecturer (Permanent)' = '2', 
+  'Instructor (Permanent)' = '3', 
+  'Adjunct (Permanent)' = '4', 
+  'Other (Permanent)' = '5', 
+  'Fellowship/Postdoc' = '11', 
+  'Visiting' = '12', 
+  'Lecturer (Temporary)' = '13', 
+  'Instructor (Temporary)' = '14', 
+  'Adjunct (Temporary)' = '15', 
+  'Other (Temporary)' = '16', 
+  'Non-Academic' = '20'
+permanent
+  'Permanent' = '1',
+  'Temporary' = '0'
