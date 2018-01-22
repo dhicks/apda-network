@@ -87,7 +87,7 @@ dataf = dataf %>%
 
 ## Filter
 dataf = dataf %>%
-    filter(permanent, 
+    filter(#permanent, 
            ## 0 and 10000 are placeholder university IDs
            placing_univ_id != '0', placing_univ_id != '10000',
            hiring_univ_id != '0', hiring_univ_id != '10000',
@@ -110,7 +110,11 @@ univ_df = tibble(univ_id = c(dataf$placing_univ_id, dataf$hiring_univ_id),
     arrange(univ_name)
 univ_df = dataf %>%
     ## Count number of (permanent) placements out of each program
-    count(univ_id = placing_univ_id) %>%
+    rename(univ_id = placing_univ_id) %>%
+    group_by(univ_id) %>%
+    summarize(total_placements = n(),
+              n = sum(permanent, na.rm = TRUE)) %>%
+    mutate(perm_placement_rate = n / total_placements) %>%
     ## Fractions and cumulative sums
     arrange(desc(n)) %>%
     mutate(frac_placement = n / sum(n, na.rm = TRUE),
@@ -134,6 +138,7 @@ ggplot(univ_df, aes(placement_rank, cum_frac_placements)) +
 ## --------------------
 ## Build network
 hiring_network = dataf %>%
+    filter(permanent) %>%
     select(placing_univ_id, hiring_univ_id, everything()) %>%
     graph_from_data_frame(directed = TRUE, 
                           vertices = univ_df)
@@ -179,7 +184,8 @@ ggplot(univ_df, aes(in_centrality)) +
     scale_x_continuous(trans = 'log10')
 
 ggplot(univ_df, aes(out_centrality, in_centrality, 
-                    color = cluster_fake)) +
+                    color = cluster_fake, 
+                    text = univ_name)) +
     geom_jitter() + 
     scale_x_log10() + scale_y_log10()
 
@@ -187,11 +193,16 @@ ggplot(univ_df, aes(out_centrality, in_centrality,
 ## **Finding**
 ## High output isn't correlated w/ out centrality
 ## Programs like ND, CUNY, Villanova produce lots of PhDs, but they aren't placed into the high-centrality departments
-ggplot(univ_df, aes(n_placements, log10(out_centrality))) +
+ggplot(univ_df, aes(n_placements, log10(out_centrality), 
+                    text = univ_name)) +
     geom_point() +
     scale_x_continuous(trans = 'reverse')
 
 ggplot(univ_df, aes(placement_rank, log10(out_centrality))) +
+    geom_point()
+
+ggplot(univ_df, aes(perm_placement_rate, log10(out_centrality), 
+                    text = univ_name)) + 
     geom_point()
 
 
@@ -263,10 +274,20 @@ ggraph(elites) +
     theme_graph()
 
 ## "Elite" status = high centrality group
-univ_df %>%
-    mutate(elite = univ_id %in% V(elites)$name) %>%
-    ggplot(aes(elite, log10(out_centrality))) + 
+univ_df = univ_df %>%
+    mutate(elite = univ_id %in% V(elites)$name)
+
+ggplot(univ_df, aes(elite, log10(out_centrality))) + 
     geom_jitter()
+
+## **Finding**
+## Median permanent placement rate for elite programs is 14 points higher than for non-elite programs
+## However, variation is also wide within each group
+ggplot(univ_df, aes(elite, perm_placement_rate, 
+                    label = univ_name)) + 
+    geom_boxplot(color = 'red') +
+    geom_jitter() +
+    scale_y_continuous(labels = scales::percent_format())
 
 ## --------------------
 ## Plotting
