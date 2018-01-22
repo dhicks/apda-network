@@ -1,1 +1,2 @@
 - data file w/ university ID, canonical name, [semantic clusters]
+- Clauset 2015-style analysis
