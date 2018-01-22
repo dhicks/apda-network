@@ -219,6 +219,22 @@ ggplot(univ_df, aes(perm_placement_rate, log10(out_centrality),
     geom_point()
 plotly::ggplotly()
 
+## While individuals can move from low to high centrality in temporary positions, this never happens with permanent positions.  However, this is expected from the way centrality is calculated.  
+# dataf %>%
+#     # filter(permanent) %>%
+#     left_join(select(univ_df, univ_id, out_centrality), 
+#           by = c('placing_univ_id' = 'univ_id')) %>%
+#     left_join(select(univ_df, univ_id, out_centrality), 
+#               by = c('hiring_univ_id' = 'univ_id')) %>%
+#     ggplot(aes(log10(out_centrality.x), 
+#                log10(out_centrality.y))) + 
+#     geom_point() + 
+#     xlab('Placing University Centrality') +
+#     ylab('Hiring University Centrality') +
+#     stat_function(fun = function (x) x, linetype = 'dashed') +
+#     facet_grid(~ permanent)
+
+
 
 
 #' Community detection
