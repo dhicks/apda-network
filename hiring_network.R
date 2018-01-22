@@ -22,89 +22,113 @@ dataf = readxl::read_excel('queryjan92018.xlsx',
                            skip = 1)
 
 dataf = dataf %>%
-  mutate(aos_category = fct_recode(aos_category, 
-                                   NULL = '1',
-                                   'LEMM' = '2',
-                                   'Value Theory' = '3',
-                                   'History and Traditions' = '4', 
-                                   'Science, Logic, and Math' = '5'),
-         aos = fct_recode(aos, 
-                          'Unknown 1' = '1', 
-                          '19th / 20th 4' = '2', 
-                          'Action 2' = '3', 
-                          'Aesthetics 3' = '4', 
-                          'African 4' = '5', 
-                          'American (incl Latin American) 4' = '6', 
-                          'Analytic (History of) 4' = '8', 
-                          'Ancient 4' = '10', 
-                          'Applied Ethics (incl Bio and Medical) 3' = '11', 
-                          'Asian 4' = '12', 
-                          'Biology (incl Environmental) 5' = '13', 
-                          'Cognitive Science / Psychology / Neuroscience / Linguistics 5' = '14', 
-                          'Comparative 4' = '15', 
-                          'Continental (incl Phenomenology) 4' = '16', 
-                          'Decision Theory 5' = '17', 
-                          'Economics 5' = '18', 
-                          'Education 3' = '19', 
-                          'Epistemology 2' = '20', 
-                          'Ethics 3' = '21', 
-                          'Gender / Race / Sexuality / Disability Studies 3' = '22', 
-                          'German (incl Kant) 4' = '23', 
-                          'History (General) 4' = '24', 
-                          'Language 2' = '25', 
-                          'Law 3' = '26', 
-                          'Logic 5' = '27', 
-                          'Math 5' = '28', 
-                          'Medieval / Renaissance 4' = '29', 
-                          'Meta-Ethics 3' = '30', 
-                          'Metaphilosophy (incl Experimental) 2' = '31', 
-                          'Metaphysics 2' = '32', 
-                          'Mind 2' = '33', 
-                          'Modern 4' = '34', 
-                          'Physics 5' = '35', 
-                          'Religion 2' = '36', 
-                          'Science (General) 5' = '37', 
-                          'Social / Political 3' = '38', 
-                          'Technology 5' = '39', 
-                          'Value (General) 3' = '40', 
-                          'Other 1' = '41'), 
-         graduation_year = as.integer(graduation_year),
-         placement_year = as.integer(placement_year),
-         position_type = fct_recode(position_type, 
-                                    'Tenure-Track' = '1',
-                                    'Lecturer (Permanent)' = '2', 
-                                    'Instructor (Permanent)' = '3', 
-                                    'Adjunct (Permanent)' = '4', 
-                                    'Other (Permanent)' = '5', 
-                                    'Fellowship/Postdoc' = '11', 
-                                    'Visiting' = '12', 
-                                    'Lecturer (Temporary)' = '13', 
-                                    'Instructor (Temporary)' = '14', 
-                                    'Adjunct (Temporary)' = '15', 
-                                    'Other (Temporary)' = '16', 
-                                    'Non-Academic' = '20'),
-         permanent = permanent == '1')
+    mutate(aos_category = fct_recode(aos_category, 
+                                     NULL = '1',
+                                     'LEMM' = '2',
+                                     'Value Theory' = '3',
+                                     'History and Traditions' = '4', 
+                                     'Science, Logic, and Math' = '5'),
+           aos = fct_recode(aos, 
+                            'Unknown 1' = '1', 
+                            '19th / 20th 4' = '2', 
+                            'Action 2' = '3', 
+                            'Aesthetics 3' = '4', 
+                            'African 4' = '5', 
+                            'American (incl Latin American) 4' = '6', 
+                            'Analytic (History of) 4' = '8', 
+                            'Ancient 4' = '10', 
+                            'Applied Ethics (incl Bio and Medical) 3' = '11', 
+                            'Asian 4' = '12', 
+                            'Biology (incl Environmental) 5' = '13', 
+                            'Cognitive Science / Psychology / Neuroscience / Linguistics 5' = '14', 
+                            'Comparative 4' = '15', 
+                            'Continental (incl Phenomenology) 4' = '16', 
+                            'Decision Theory 5' = '17', 
+                            'Economics 5' = '18', 
+                            'Education 3' = '19', 
+                            'Epistemology 2' = '20', 
+                            'Ethics 3' = '21', 
+                            'Gender / Race / Sexuality / Disability Studies 3' = '22', 
+                            'German (incl Kant) 4' = '23', 
+                            'History (General) 4' = '24', 
+                            'Language 2' = '25', 
+                            'Law 3' = '26', 
+                            'Logic 5' = '27', 
+                            'Math 5' = '28', 
+                            'Medieval / Renaissance 4' = '29', 
+                            'Meta-Ethics 3' = '30', 
+                            'Metaphilosophy (incl Experimental) 2' = '31', 
+                            'Metaphysics 2' = '32', 
+                            'Mind 2' = '33', 
+                            'Modern 4' = '34', 
+                            'Physics 5' = '35', 
+                            'Religion 2' = '36', 
+                            'Science (General) 5' = '37', 
+                            'Social / Political 3' = '38', 
+                            'Technology 5' = '39', 
+                            'Value (General) 3' = '40', 
+                            'Other 1' = '41'), 
+           graduation_year = as.integer(graduation_year),
+           placement_year = as.integer(placement_year),
+           position_type = fct_recode(position_type, 
+                                      'Tenure-Track' = '1',
+                                      'Lecturer (Permanent)' = '2', 
+                                      'Instructor (Permanent)' = '3', 
+                                      'Adjunct (Permanent)' = '4', 
+                                      'Other (Permanent)' = '5', 
+                                      'Fellowship/Postdoc' = '11', 
+                                      'Visiting' = '12', 
+                                      'Lecturer (Temporary)' = '13', 
+                                      'Instructor (Temporary)' = '14', 
+                                      'Adjunct (Temporary)' = '15', 
+                                      'Other (Temporary)' = '16', 
+                                      'Non-Academic' = '20'),
+           permanent = permanent == '1')
 
 ## Filter
 dataf = dataf %>%
-  filter(permanent, 
-         ## 0 and 10000 are placeholder university IDs
-         placing_univ_id != '0', placing_univ_id != '10000',
-         hiring_univ_id != '0', hiring_univ_id != '10000',
-         !is.na(placing_univ_id), !is.na(placing_univ), 
-         !is.na(hiring_univ_id), !is.na(hiring_univ))
+    filter(permanent, 
+           ## 0 and 10000 are placeholder university IDs
+           placing_univ_id != '0', placing_univ_id != '10000',
+           hiring_univ_id != '0', hiring_univ_id != '10000',
+           !is.na(placing_univ_id), !is.na(placing_univ), 
+           !is.na(hiring_univ_id), !is.na(hiring_univ))
 
 
 ## University-level data
 ## --------------------
 univ_df = tibble(univ_id = c(dataf$placing_univ_id, dataf$hiring_univ_id),
-       univ_name = c(dataf$placing_univ, dataf$hiring_univ)) %>%
-  ## Canonical names
-  group_by(univ_id) %>%
-  summarize(univ_name = min(univ_name)) %>%
-  ## (Fake) AOS clusters
-  mutate(cluster_fake = as.factor(rep_len(1:4, nrow(.)))) %>%
-  arrange(univ_name)
+                 univ_name = c(dataf$placing_univ, dataf$hiring_univ)) %>%
+    ## Canonical names
+    group_by(univ_id, univ_name) %>%
+    summarize(n = n()) %>%
+    group_by(univ_id) %>%
+    summarize(univ_name = first(univ_name[which(n == max(n))])) %>% 
+    ungroup() %>%
+    ## (Fake) AOS clusters
+    mutate(cluster_fake = as.factor(rep_len(1:4, nrow(.)))) %>%
+    arrange(univ_name)
+univ_df = dataf %>%
+    ## Count number of (permanent) placements out of each program
+    count(univ_id = placing_univ_id) %>%
+    ## Fractions and cumulative sums
+    arrange(desc(n)) %>%
+    mutate(frac_placement = n / sum(n, na.rm = TRUE),
+           cum_placements = cumsum(ifelse(is.na(n), 0, n)), 
+           cum_frac_placements = cum_placements / 
+               sum(n, na.rm = TRUE),
+           placement_rank = percent_rank(cum_placements)) %>%
+    rename(n_placements = n) %>% 
+    left_join(univ_df, .)
+
+## **Finding**
+## 25% of programs account for about 50% of (permanent) placements
+ggplot(univ_df, aes(placement_rank, cum_frac_placements)) + 
+    geom_step() +
+    scale_x_continuous(labels = scales::percent_format(), 
+                       name = 'PhD Programs') +
+    scale_y_continuous(labels = scales::percent_format(), 
+                       name = 'Permanent Placements')
 
 
 ## --------------------
@@ -120,43 +144,56 @@ components(hiring_network)$csize
 ## Out- and in-centrality
 set.seed(42)
 V(hiring_network)$in_centrality = eigen_centrality(hiring_network, 
-                                           directed = TRUE)$vector
+                                                   directed = TRUE)$vector
 graph.reverse <- function (graph) {
-  if (!is.directed(graph))
-    return(graph)
-  e <- get.data.frame(graph, what="edges")
-  ## swap "from" & "to"
-  neworder <- 1:length(e)
-  neworder[1:2] <- c(2,1)
-  e <- e[neworder]
-  names(e) <- names(e)[neworder]
-  graph.data.frame(e, vertices = get.data.frame(graph, what="vertices"))
+    if (!is.directed(graph))
+        return(graph)
+    e <- get.data.frame(graph, what="edges")
+    ## swap "from" & "to"
+    neworder <- 1:length(e)
+    neworder[1:2] <- c(2,1)
+    e <- e[neworder]
+    names(e) <- names(e)[neworder]
+    graph.data.frame(e, vertices = get.data.frame(graph, what="vertices"))
 }
 V(hiring_network)$out_centrality = hiring_network %>%
-  graph.reverse() %>%
-  eigen_centrality(directed = TRUE) %>%
-  .$vector
+    graph.reverse() %>%
+    eigen_centrality(directed = TRUE) %>%
+    .$vector
 
+## Add centrality statistics to the university df
 univ_df = univ_df %>%
-  mutate(out_centrality = V(hiring_network)[univ_df$univ_id]$out_centrality, 
-         in_centrality = V(hiring_network)[univ_df$univ_id]$in_centrality)
+    mutate(out_centrality = V(hiring_network)[univ_df$univ_id]$out_centrality, 
+           in_centrality = V(hiring_network)[univ_df$univ_id]$in_centrality)
 
 
 ## --------------------
 ## Exploring centrality scores
 ## NB there seem to be (small?) differences in scores (at the low end?) across runs of the centrality algorithm
 ggplot(univ_df, aes(out_centrality)) + 
-  geom_density() + geom_rug() +
-  scale_x_continuous(trans = 'log10')
+    geom_density() + geom_rug() +
+    scale_x_continuous(trans = 'log10')
 
 ggplot(univ_df, aes(in_centrality)) + 
-  geom_density() + geom_rug() +
-  scale_x_continuous(trans = 'log10')
+    geom_density() + geom_rug() +
+    scale_x_continuous(trans = 'log10')
 
 ggplot(univ_df, aes(out_centrality, in_centrality, 
                     color = cluster_fake)) +
-  geom_jitter() + 
-  scale_x_log10() + scale_y_log10()
+    geom_jitter() + 
+    scale_x_log10() + scale_y_log10()
+
+
+## **Finding**
+## High output isn't correlated w/ out centrality
+## Programs like ND, CUNY, Villanova produce lots of PhDs, but they aren't placed into the high-centrality departments
+ggplot(univ_df, aes(n_placements, log10(out_centrality))) +
+    geom_point() +
+    scale_x_continuous(trans = 'reverse')
+
+ggplot(univ_df, aes(placement_rank, log10(out_centrality))) +
+    geom_point()
+
 
 ## --------------------
 ## Community detection
@@ -180,48 +217,65 @@ ggplot(univ_df, aes(out_centrality, in_centrality,
 communities = cluster_walktrap(hiring_network, steps = 32)
 V(hiring_network)$community = membership(communities)
 univ_df = univ_df %>%
-  mutate(community = as.factor(V(hiring_network)[univ_df$univ_id]$community))
+    mutate(community = as.factor(V(hiring_network)[univ_df$univ_id]$community))
 
 with(univ_df, table(cluster_fake, community)) %>%
-  chisq.test(simulate.p.value = TRUE)
+    chisq.test(simulate.p.value = TRUE)
 
 univ_df %>%
-  group_by(community, cluster_fake) %>%
-  summarize(cluster_n = n()) %>%
-  group_by(community) %>%
-  mutate(community_tot = sum(cluster_n), 
-         cluster_frac = cluster_n / community_tot, 
-         H = sum(cluster_frac * log2(cluster_frac))) %>%
-  ggplot(aes(fct_reorder(community, H, .desc = TRUE),
-                       cluster_n, fill = cluster_fake)) + 
-  geom_col() + 
-  coord_flip()
-  
+    group_by(community, cluster_fake) %>%
+    summarize(cluster_n = n()) %>%
+    group_by(community) %>%
+    mutate(community_tot = sum(cluster_n), 
+           cluster_frac = cluster_n / community_tot, 
+           H = sum(cluster_frac * log2(cluster_frac))) %>%
+    ggplot(aes(fct_reorder(community, H, .desc = TRUE),
+               cluster_n, fill = cluster_fake)) + 
+    geom_col() + 
+    coord_flip()
+
 
 ## --------------------
 ## Core elite universities
-## Start w/ Oxford, and work upstream up to 100 steps
-elites = make_ego_graph(hiring_network, order = 100, 
+## Start w/ Oxford, and work upstream
+## Only need to go 8 steps to get closure
+1:15 %>%
+    map(~ make_ego_graph(hiring_network, order = .x, 
+                         nodes = '512', mode = 'in')) %>%
+    flatten() %>%
+    map(~ length(V(.x))) %>%
+    tibble(order = 1:length(.), 
+           size = unlist(.)) %>%
+    ggplot(aes(order, size)) + geom_point()
+
+elites = make_ego_graph(hiring_network, order = 8, 
                         nodes = '512', 
                         mode = 'in') %>%
-  .[[1]]
+    .[[1]]
 
 ggraph(elites) + 
-  geom_node_label(aes(label = univ_name, size = out_centrality)) + 
-  geom_edge_fan(arrow = arrow(length = unit(.01, 'npc')), 
-                alpha = .25,
-                spread = 5) +
-  theme_graph()
+    geom_node_label(aes(label = univ_name, 
+                        size = log10(out_centrality))) + 
+    geom_edge_fan(arrow = arrow(length = unit(.01, 'npc')), 
+                  alpha = .25,
+                  spread = 5) +
+    scale_size_continuous(range = c(.5, 3)) +
+    theme_graph()
 
+## "Elite" status = high centrality group
+univ_df %>%
+    mutate(elite = univ_id %in% V(elites)$name) %>%
+    ggplot(aes(elite, log10(out_centrality))) + 
+    geom_jitter()
 
 ## --------------------
 ## Plotting
 ## Coarser community structure
 large_clusters = which(sizes(communities) > 100)
 V(hiring_network)$community_coarse = ifelse(
-  V(hiring_network)$community %in% large_clusters, 
-  V(hiring_network)$community, 
-  'other')
+    V(hiring_network)$community %in% large_clusters, 
+    V(hiring_network)$community, 
+    'other')
 
 hiring_network %>%
     induced_subgraph(which(degree(., mode = 'out') > 10)) %>%
@@ -230,7 +284,7 @@ hiring_network %>%
     #                     size = log10(1 + out_centrality), 
     #                     color = as.factor(community))) +
     geom_edge_fan(arrow = arrow(length = unit(.01, 'npc')), 
-                spread = 5) +
+                  spread = 5) +
     geom_node_point(aes(size = log10(1 + out_centrality), 
                         # color = as.factor(community))) +
                         color = community_coarse)) +
@@ -240,14 +294,14 @@ hiring_network %>%
 
 ## Chord diagram
 hiring_network %>%
-  induced_subgraph(which(degree(., mode = 'out') > 1)) %>%
-  ggraph(layout = 'linear', sort.by = 'community_coarse', circular = TRUE) +
-  geom_edge_arc(arrow = arrow(length = unit(.01, 'npc')), alpha = .1) +
-  geom_node_point(aes(size = log10(1 + out_centrality), 
-                      # color = as.factor(community))) +
-                      color = community_coarse)) +
-  scale_color_brewer(palette = 'Set1', guide = FALSE) +
-  theme_graph()
+    induced_subgraph(which(degree(., mode = 'out') > 1)) %>%
+    ggraph(layout = 'linear', sort.by = 'community_coarse', circular = TRUE) +
+    geom_edge_arc(arrow = arrow(length = unit(.01, 'npc')), alpha = .1) +
+    geom_node_point(aes(size = log10(1 + out_centrality), 
+                        # color = as.factor(community))) +
+                        color = community_coarse)) +
+    scale_color_brewer(palette = 'Set1', guide = FALSE) +
+    theme_graph()
 
 
 # graph_df = as_data_frame(graph, what = 'vertices')
