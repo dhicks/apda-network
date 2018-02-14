@@ -199,7 +199,7 @@ ggplot(univ_df, aes(out_centrality, in_centrality,
                     text = univ_name)) +
     geom_jitter() + 
     scale_x_log10() + scale_y_log10()
-plotly::ggplotly()
+#plotly::ggplotly()
 
 
 #' ## Finding ##
@@ -209,7 +209,7 @@ ggplot(univ_df, aes(n_placements, log10(out_centrality),
                     text = univ_name)) +
     geom_point() +
     scale_x_continuous(trans = 'reverse')
-plotly::ggplotly()
+#plotly::ggplotly()
 
 ggplot(univ_df, aes(placement_rank, log10(out_centrality))) +
     geom_point()
@@ -217,7 +217,7 @@ ggplot(univ_df, aes(placement_rank, log10(out_centrality))) +
 ggplot(univ_df, aes(perm_placement_rate, log10(out_centrality), 
                     text = univ_name)) + 
     geom_point()
-plotly::ggplotly()
+#plotly::ggplotly()
 
 ## While individuals can move from low to high centrality in temporary positions, this never happens with permanent positions.  However, this is expected from the way centrality is calculated.  
 # dataf %>%
@@ -299,6 +299,18 @@ elites = make_ego_graph(hiring_network, order = 8,
                         mode = 'in') %>%
     .[[1]]
 
+## How large is the elite community?  
+## 61 programs; 6% of all programs in the network; 
+## 39% of programs with at least 1 placement in the dataset
+length(V(elites))
+length(V(elites)) / length(V(hiring_network))
+length(V(elites)) / sum(!is.na(univ_df$total_placements))
+
+## What fraction of hires are within elites?  
+## 15% of all permanent hires; 7% of all hires
+length(E(elites)) / length(E(hiring_network))
+length(E(elites)) / length(E(hiring_network))
+
 ggraph(elites) + 
     geom_node_label(aes(label = univ_name, 
                         size = log10(out_centrality))) + 
@@ -315,6 +327,15 @@ univ_df = univ_df %>%
 ggplot(univ_df, aes(elite, log10(out_centrality))) + 
     geom_jitter()
 
+## What fraction of elite graduates end up in elite programs? 
+## 221 / (221 + 569) = 28% of those w/ permanent placements
+dataf %>%
+    filter(permanent) %>%
+    left_join(univ_df, by = c('placing_univ_id' = 'univ_id')) %>%
+    left_join(univ_df, by = c('hiring_univ_id' = 'univ_id')) %>%
+    select(elite.x, elite.y) %>%
+    table()
+
 #' ## Finding ##
 #' **Median permanent placement rate for elite programs is 14 points higher than for non-elite programs.** 
 #' However, variation is also wide within each group; 
@@ -324,7 +345,7 @@ ggplot(univ_df, aes(elite, perm_placement_rate,
     geom_boxplot(color = 'red') +
     geom_jitter() +
     scale_y_continuous(labels = scales::percent_format())
-plotly::ggplotly()
+#plotly::ggplotly()
 
 
 #' Plotting
