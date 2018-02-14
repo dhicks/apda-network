@@ -91,7 +91,7 @@ individual_df = individual_df_unfltd %>%
         !is.na(placing_univ_id), !is.na(placing_univ), 
         !is.na(hiring_univ_id), !is.na(hiring_univ))
 
-## University-level data (permanent hires only)
+## University-level data
 univ_df = tibble(univ_id = c(individual_df$placing_univ_id, individual_df$hiring_univ_id),
                  univ_name = c(individual_df$placing_univ, individual_df$hiring_univ)) %>%
     ## Canonical names
@@ -108,16 +108,15 @@ univ_df = individual_df %>%
     rename(univ_id = placing_univ_id) %>%
     group_by(univ_id) %>%
     summarize(total_placements = n(),
-              n = sum(permanent, na.rm = TRUE)) %>%
-    mutate(perm_placement_rate = n / total_placements) %>%
+              perm_placements = sum(permanent, na.rm = TRUE)) %>%
+    mutate(perm_placement_rate = perm_placements / total_placements) %>%
     ## Fractions and cumulative sums
-    arrange(desc(n)) %>%
-    mutate(frac_placement = n / sum(n, na.rm = TRUE),
-           cum_placements = cumsum(ifelse(is.na(n), 0, n)), 
-           cum_frac_placements = cum_placements / 
-               sum(n, na.rm = TRUE),
-           placement_rank = percent_rank(cum_placements)) %>%
-    rename(n_placements = n) %>% 
+    arrange(desc(perm_placements)) %>%
+    mutate(frac_perm_placements = perm_placements / sum(perm_placements, na.rm = TRUE),
+           cum_perm_placements = cumsum(ifelse(is.na(perm_placements), 0, perm_placements)), 
+           frac_cum_perm_placements = cum_perm_placements / 
+               sum(perm_placements, na.rm = TRUE),
+           perm_placement_rank = percent_rank(cum_perm_placements)) %>%
     left_join(univ_df, .)
 
 save(individual_df_unfltd, individual_df, univ_df, file = '01_parsed.Rdata')
