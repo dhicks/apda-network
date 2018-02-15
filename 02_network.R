@@ -14,10 +14,9 @@ library(ggraph)
 ## Load data
 load('01_parsed.Rdata')
 
-
 #' ## Finding ##
 #' **25% of programs account for about 50% of (permanent) placements**
-ggplot(univ_df, aes(placement_rank, cum_frac_placements)) + 
+ggplot(univ_df, aes(perm_placement_rank, frac_cum_perm_placements)) + 
     geom_step() +
     scale_x_continuous(labels = scales::percent_format(), 
                        name = 'PhD Programs') +
@@ -27,7 +26,8 @@ ggplot(univ_df, aes(placement_rank, cum_frac_placements)) +
 
 #' Build network
 #' --------------------
-hiring_network = dataf %>%
+## NB Only permanent placements
+hiring_network = individual_df %>%
     filter(permanent) %>%
     select(placing_univ_id, hiring_univ_id, everything()) %>%
     graph_from_data_frame(directed = TRUE, 
@@ -85,14 +85,12 @@ ggplot(univ_df, aes(out_centrality, in_centrality,
 
 #' ## Finding ##
 #' **High output isn't correlated w/ centrality.** 
-#' Programs like ND, CUNY, UVA produce lots of PhDs, but they aren't placed into the high-centrality departments. 
-ggplot(univ_df, aes(n_placements, log10(out_centrality), 
-                    text = univ_name)) +
-    geom_point() +
-    scale_x_continuous(trans = 'reverse')
+#' Programs like ND, CUNY, New School produce lots of PhDs, but they aren't placed into the high-centrality departments. 
+ggplot(univ_df, aes(total_placements, log10(out_centrality), text = univ_name)) +
+    geom_point()
 #plotly::ggplotly()
 
-ggplot(univ_df, aes(placement_rank, log10(out_centrality))) +
+ggplot(univ_df, aes(perm_placement_rank, log10(out_centrality))) +
     geom_point()
 
 ggplot(univ_df, aes(perm_placement_rate, log10(out_centrality), 
@@ -120,8 +118,10 @@ ggplot(univ_df, aes(perm_placement_rate, log10(out_centrality),
 
 #' Community detection
 #' --------------------
-## steps = 32 minimizes both entropy of cluster sizes and total # clusters
+## steps = 32 has low values for both entropy of cluster sizes (high delta H) and total # clusters
+## but somewhere along the way this started producing >300 clusters? 
 # walk_len = rep(2:100, 1)
+# ## NB Takes a minute or so
 # cluster_stats = walk_len %>%
 #   map(~ cluster_walktrap(hiring_network, steps = .x)) %>%
 #   map(~ list(sizes = sizes(.x), length = length(.x))) %>%
@@ -130,12 +130,12 @@ ggplot(univ_df, aes(perm_placement_rate, log10(out_centrality),
 #   mutate(walk_len = as.factor(walk_len),
 #          delta_H = log2(n_clusters) - H)
 # 
-# ggplot(cluster_stats, aes(walk_len, delta_H)) + 
-#     geom_point() + 
-#     coord_flip()
-# ggplot(cluster_stats, aes(walk_len, n_clusters)) + 
+# ggplot(cluster_stats, aes(walk_len, delta_H)) +
 #     geom_point() +
-#     scale_y_log10() + 
+#     coord_flip()
+# ggplot(cluster_stats, aes(walk_len, n_clusters)) +
+#     geom_point() +
+#     scale_y_log10() +
 #     coord_flip()
 # ggplot(cluster_stats, aes(n_clusters, delta_H)) +
 #   geom_text(aes(label = walk_len)) +
@@ -190,7 +190,7 @@ length(V(elites)) / sum(!is.na(univ_df$total_placements))
 ## What fraction of hires are within elites?  
 ## 15% of all permanent hires; 7% of all hires
 length(E(elites)) / length(E(hiring_network))
-length(E(elites)) / length(E(hiring_network))
+length(E(elites)) / nrow(individual_df)
 
 ggraph(elites) + 
     geom_node_label(aes(label = univ_name, 
@@ -221,6 +221,7 @@ dataf %>%
 #' **Median permanent placement rate for elite programs is 14 points higher than for non-elite programs.** 
 #' However, variation is also wide within each group; 
 #' even among elite programs, median permanent placement rate is only 58%. 
+#' This is also not yet controlling for graduation year, area, or demographics. 
 ggplot(univ_df, aes(elite, perm_placement_rate, 
                     label = univ_name)) + 
     geom_boxplot(color = 'red') +
@@ -265,3 +266,5 @@ hiring_network %>%
     scale_color_brewer(palette = 'Set1', guide = FALSE) +
     theme_graph()
 
+## Save university-level data with network statistics
+save(univ_df, file = '02_univ_net_stats.Rdata')
