@@ -1,7 +1,13 @@
+#' ---
+#' output:
+#'     html_document: 
+#'         self_contained: no
+#' ---
+
 #' # Findings #
 #' - 25% of programs account for 50% of permanent placements
 #' - Centrality scores reveal a clear division between two groups of programs, with "high" and "low" scores.  
-#' - High output isn't correlated with centrality scores.  Programs like Notre Dame, CUNY, and UVA produce lots of PhDs, but they aren't placed at high-centrality programs.  
+#' - High output is only modestly correlated with centrality scores.  Programs like Notre Dame, CUNY, and UVA produce lots of PhDs, but they aren't placed at high-centrality programs.  
 #' - A closed group of 61 programs can be identified:  All recent hires by schools within this group received their PhD within this group.  This "elite" group corresponds exactly to the high-centrality programs.  
 #' - Median permanent placement rate is 14 points higher at elite programs (58% vs. 44% for non-elite programs).  
 #' - However, there is large variation in placement rate within both groups.  
@@ -80,15 +86,24 @@ ggplot(univ_df, aes(out_centrality, in_centrality,
                     text = univ_name)) +
     geom_jitter() + 
     scale_x_log10() + scale_y_log10()
-#plotly::ggplotly()
+plotly::ggplotly()
 
 
 #' ## Finding ##
-#' **High output isn't correlated w/ centrality.** 
+#' **High output is only modestly correlated w/ centrality.** 
 #' Programs like ND, CUNY, New School produce lots of PhDs, but they aren't placed into the high-centrality departments. 
-ggplot(univ_df, aes(total_placements, log10(out_centrality), text = univ_name)) +
-    geom_point()
-#plotly::ggplotly()
+ggplot(univ_df, aes(total_placements, log10(out_centrality)
+                    )) +
+    geom_point(aes(text = univ_name))
+plotly::ggplotly()
+
+univ_df %>%
+    mutate(out_centrality_log = log10(out_centrality)) %>%
+    filter(!is.na(out_centrality_log) & 
+               out_centrality > 0 &
+               !is.na(total_placements)) %>%
+    select(total_placements, out_centrality_log) %>%
+    cor()
 
 ggplot(univ_df, aes(perm_placement_rank, log10(out_centrality))) +
     geom_point()
@@ -96,7 +111,7 @@ ggplot(univ_df, aes(perm_placement_rank, log10(out_centrality))) +
 ggplot(univ_df, aes(perm_placement_rate, log10(out_centrality), 
                     text = univ_name)) + 
     geom_point()
-#plotly::ggplotly()
+plotly::ggplotly()
 
 ## While individuals can move from low to high centrality in temporary positions, this never happens with permanent positions.  However, this is expected from the way centrality is calculated.  
 # dataf %>%
@@ -118,12 +133,21 @@ ggplot(univ_df, aes(perm_placement_rate, log10(out_centrality),
 
 #' Community detection
 #' --------------------
-## steps = 32 has low values for both entropy of cluster sizes (high delta H) and total # clusters
+## steps = 26 has low values for both entropy of cluster sizes (high delta H) and total # clusters
 ## but somewhere along the way this started producing >300 clusters? 
+## bc ~300 connected components
+## Extract giant component
+hiring_network_gc = hiring_network %>%
+    components %>% 
+    .$csize %>%
+    {which(. == max(.))} %>%
+    {components(hiring_network)$membership == .} %>%
+    which() %>%
+    induced_subgraph(hiring_network, .)
 # walk_len = rep(2:100, 1)
 # ## NB Takes a minute or so
 # cluster_stats = walk_len %>%
-#   map(~ cluster_walktrap(hiring_network, steps = .x)) %>%
+#   map(~ cluster_walktrap(hiring_network_gc, steps = .x)) %>%
 #   map(~ list(sizes = sizes(.x), length = length(.x))) %>%
 #   map_dfr(~ tibble(H = -sum(.x$sizes/sum(.x$sizes) * log2(.x$sizes/sum(.x$sizes))),
 #                    n_clusters = .x$length)) %>%
@@ -135,13 +159,15 @@ ggplot(univ_df, aes(perm_placement_rate, log10(out_centrality),
 #     coord_flip()
 # ggplot(cluster_stats, aes(walk_len, n_clusters)) +
 #     geom_point() +
-#     scale_y_log10() +
 #     coord_flip()
 # ggplot(cluster_stats, aes(n_clusters, delta_H)) +
 #   geom_text(aes(label = walk_len)) +
 #   scale_x_continuous()
 
-communities = cluster_walktrap(hiring_network, steps = 32)
+## TODO: work only w/ giant component below
+# communities = cluster_edge_betweenness(hiring_network, 
+#                                        directed = FALSE)
+communities = cluster_walkstrap(hiring_network, steps = 26)
 V(hiring_network)$community = membership(communities)
 univ_df = univ_df %>%
     mutate(community = as.factor(V(hiring_network)[univ_df$univ_id]$community))
@@ -192,6 +218,8 @@ length(V(elites)) / sum(!is.na(univ_df$total_placements))
 length(E(elites)) / length(E(hiring_network))
 length(E(elites)) / nrow(individual_df)
 
+# png(file = '02_elite_net.png', 
+#     width = 11, height = 11, units = 'in', res = 400)
 ggraph(elites) + 
     geom_node_label(aes(label = univ_name, 
                         size = log10(out_centrality))) + 
@@ -200,6 +228,7 @@ ggraph(elites) +
                   spread = 5) +
     scale_size_continuous(range = c(.5, 3)) +
     theme_graph()
+# dev.off()
 
 ## "Elite" status = high centrality group
 univ_df = univ_df %>%
@@ -210,7 +239,7 @@ ggplot(univ_df, aes(elite, log10(out_centrality))) +
 
 ## What fraction of elite graduates end up in elite programs? 
 ## 221 / (221 + 569) = 28% of those w/ permanent placements
-dataf %>%
+individual_df %>%
     filter(permanent) %>%
     left_join(univ_df, by = c('placing_univ_id' = 'univ_id')) %>%
     left_join(univ_df, by = c('hiring_univ_id' = 'univ_id')) %>%
@@ -227,7 +256,7 @@ ggplot(univ_df, aes(elite, perm_placement_rate,
     geom_boxplot(color = 'red') +
     geom_jitter() +
     scale_y_continuous(labels = scales::percent_format())
-#plotly::ggplotly()
+plotly::ggplotly()
 
 
 #' Plotting
