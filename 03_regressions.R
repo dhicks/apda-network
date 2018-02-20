@@ -1,7 +1,7 @@
 #' ---
 #' output:
 #'     html_document: 
-#'         self_contained: no
+#'         self_contained: yes
 #' ---
 
 ## Regression models of placement outcomes

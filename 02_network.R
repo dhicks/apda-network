@@ -1,7 +1,7 @@
 #' ---
 #' output:
 #'     html_document: 
-#'         self_contained: no
+#'         self_contained: yes
 #' ---
 
 #' # Findings #
@@ -167,7 +167,7 @@ hiring_network_gc = hiring_network %>%
 ## TODO: work only w/ giant component below
 # communities = cluster_edge_betweenness(hiring_network, 
 #                                        directed = FALSE)
-communities = cluster_walkstrap(hiring_network, steps = 26)
+communities = cluster_walktrap(hiring_network, steps = 26)
 V(hiring_network)$community = membership(communities)
 univ_df = univ_df %>%
     mutate(community = as.factor(V(hiring_network)[univ_df$univ_id]$community))
