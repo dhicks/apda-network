@@ -30,6 +30,7 @@ individual_df = individual_df %>%
 
 
 ## Model 1 --------------------
+## AOS alone
 model_1 = stan_glmer(data = individual_df, 
         formula = permanent ~ 0 + (1|aos_category), 
         family = 'binomial', 
@@ -46,6 +47,7 @@ model_1 %>%
     coord_flip()
 
 ## Model 2 --------------------
+## AOS + grad year
 model_2 = stan_glmer(data = individual_df, 
                      formula = permanent ~ 0 + (1|aos_category) +
                          (1|graduation_year), 
@@ -63,6 +65,7 @@ model_2 %>%
     coord_flip()
 
 ## Model 3 --------------------
+## AOS + grad year + program elite status
 model_3 = stan_glmer(data = individual_df, 
                      formula = permanent ~ 0 + (1|aos_category) + 
                          (1|graduation_year) + 
@@ -70,8 +73,18 @@ model_3 = stan_glmer(data = individual_df,
                      family = 'binomial', 
                      chains = 2, iter = 4000)
 
+## Model 4 --------------------
+## AOS + grad year + program elite status + clusters and communities
+model_4 = stan_glmer(data = individual_df, 
+                     formula = permanent ~ 0 + (1|aos_category) + 
+                         (1|graduation_year) + 
+                         (1|elite) +
+                         (1|cluster) + (1|community), 
+                     family = 'binomial', 
+                     chains = 2, iter = 4000)
+
 ## Check ESS and Rhat
-model_3 %>%
+model_4 %>%
     summary() %>%
     as.data.frame() %>%
     rownames_to_column('parameter') %>%
@@ -79,7 +92,7 @@ model_3 %>%
     knitr::kable()
 
 ## Posterior estimates for coefficients
-model_3 %>%
+model_4 %>%
     tidy(parameters = 'varying', intervals = TRUE) %>%
     select(-std.error) %>%
     arrange(group, level) %>%
@@ -97,7 +110,7 @@ model_3 %>%
 
 ## Playing around with ridgeline plots
 library(ggridges)
-model_3 %>%
+model_4 %>%
     as_tibble() %>%
     gather(key = parameter, value = value) %>%
     filter(str_detect(parameter, 'aos_category') & 
@@ -108,7 +121,7 @@ model_3 %>%
     
 
 ## Posterior for diff between elite and non-elite
-model_3 %>%
+model_4 %>%
     as_tibble() %>%
     select(elite = `b[(Intercept) elite:TRUE]`, 
            non_elite = `b[(Intercept) elite:FALSE]`) %>%
@@ -120,9 +133,9 @@ model_3 %>%
     scale_x_continuous(labels = scales::percent_format())
 
 ## Posterior predictive checks
-pp_check(model_3, nreps = 50)
+pp_check(model_4, nreps = 50)
 ## This comes from Gelman and Hill (2006), 97 fig 5.13b
-pp_check(model_3, plotfun = 'error_binned', nreps = 6)
+pp_check(model_4, plotfun = 'error_binned', nreps = 6)
 
 ## Model 4 --------------------
 # model_4 = stan_glmer(data = individual_df, 

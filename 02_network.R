@@ -11,7 +11,7 @@
 #' - A closed group of 61 programs can be identified:  All recent hires by schools within this group received their PhD within this group.  This "elite" group corresponds exactly to the high-centrality programs.  
 #' - Median permanent placement rate is 14 points higher at elite programs (58% vs. 44% for non-elite programs).  
 #' - However, there is large variation in placement rate within both groups.  
-#' - [TODO: semantic vs. topological clustering]
+#' - There is no correlation between semantic clusters and topological communities. 
 
 library(tidyverse)
 library(igraph)
@@ -82,7 +82,7 @@ ggplot(univ_df, aes(in_centrality)) +
     scale_x_continuous(trans = 'log10')
 
 ggplot(univ_df, aes(out_centrality, in_centrality, 
-                    color = cluster_fake, 
+                    color = cluster, 
                     text = univ_name)) +
     geom_jitter() + 
     scale_x_log10() + scale_y_log10()
@@ -144,8 +144,9 @@ hiring_network_gc = hiring_network %>%
     {components(hiring_network)$membership == .} %>%
     which() %>%
     induced_subgraph(hiring_network, .)
+
 # walk_len = rep(2:100, 1)
-# ## NB Takes a minute or so
+# # ## NB Takes a minute or so
 # cluster_stats = walk_len %>%
 #   map(~ cluster_walktrap(hiring_network_gc, steps = .x)) %>%
 #   map(~ list(sizes = sizes(.x), length = length(.x))) %>%
@@ -164,28 +165,39 @@ hiring_network_gc = hiring_network %>%
 #   geom_text(aes(label = walk_len)) +
 #   scale_x_continuous()
 
-## TODO: work only w/ giant component below
-# communities = cluster_edge_betweenness(hiring_network, 
-#                                        directed = FALSE)
-communities = cluster_walktrap(hiring_network, steps = 26)
-V(hiring_network)$community = membership(communities)
-univ_df = univ_df %>%
-    mutate(community = as.factor(V(hiring_network)[univ_df$univ_id]$community))
 
-with(univ_df, table(cluster_fake, community)) %>%
+communities = cluster_walktrap(hiring_network_gc, steps = 26)
+V(hiring_network_gc)$community = membership(communities)
+univ_df = univ_df %>%
+    left_join({hiring_network_gc %>%
+            as_data_frame(what = 'vertices') %>% 
+            select(univ_id = name, community) %>%
+            mutate(community = as.character(community))})
+
+#' ## Finding ##
+#' **There is no correlation between semantic clusters and topological communities.**
+univ_df %>%
+    filter(!is.na(community), !is.na(cluster)) %>%
+    select(community, cluster) %>%
+    table() %>%
     chisq.test(simulate.p.value = TRUE)
 
 univ_df %>%
-    group_by(community, cluster_fake) %>%
-    summarize(cluster_n = n()) %>%
+    filter(!is.na(community), !is.na(cluster)) %>%
+    count(community, cluster) %>%
+    rename(cluster_n = n) %>%
     group_by(community) %>%
     mutate(community_tot = sum(cluster_n), 
            cluster_frac = cluster_n / community_tot, 
            H = sum(cluster_frac * log2(cluster_frac))) %>%
     ggplot(aes(fct_reorder(community, H, .desc = TRUE),
-               cluster_n, fill = cluster_fake)) + 
+               cluster_n, fill = cluster)) + 
     geom_col() + 
-    coord_flip()
+    coord_flip() +
+    xlab('Topological communities') +
+    ylab('# of schools in community') +
+    scale_fill_brewer(palette = 'Set1', 
+                       name = 'Semantic\nclusters')
 
 
 #' Core elite universities
@@ -237,6 +249,19 @@ univ_df = univ_df %>%
 ggplot(univ_df, aes(elite, log10(out_centrality))) + 
     geom_jitter()
 
+## "Elite" status and clusters
+## Elites basically don't appear in clusters 2, 3, 7
+univ_df %>%
+    filter(!is.na(cluster)) %>%
+    ggplot(aes(cluster, color = elite)) + 
+    geom_point(stat = 'count') +
+    geom_line(aes(group = elite), stat = 'count')
+## Elites are mostly confined to the 3 large communities
+univ_df %>%
+    filter(!is.na(community)) %>%
+    ggplot(aes(as.integer(community), fill = elite)) + 
+    geom_bar()
+
 ## What fraction of elite graduates end up in elite programs? 
 ## 221 / (221 + 569) = 28% of those w/ permanent placements
 individual_df %>%
@@ -263,13 +288,13 @@ plotly::ggplotly()
 #' --------------------
 #' Coarser community structure
 large_clusters = which(sizes(communities) > 100)
-V(hiring_network)$community_coarse = ifelse(
-    V(hiring_network)$community %in% large_clusters, 
-    V(hiring_network)$community, 
+V(hiring_network_gc)$community_coarse = ifelse(
+    V(hiring_network_gc)$community %in% large_clusters, 
+    V(hiring_network_gc)$community, 
     'other')
 
 #' FR
-hiring_network %>%
+hiring_network_gc %>%
     induced_subgraph(which(degree(., mode = 'out') > 10)) %>%
     ggraph() +
     # geom_node_label(aes(label = univ_name, 
@@ -285,7 +310,7 @@ hiring_network %>%
     theme_graph()
 
 #' Chord diagram
-hiring_network %>%
+hiring_network_gc %>%
     induced_subgraph(which(degree(., mode = 'out') > 1)) %>%
     ggraph(layout = 'linear', sort.by = 'community_coarse', circular = TRUE) +
     geom_edge_arc(arrow = arrow(length = unit(.01, 'npc')), alpha = .1) +

@@ -1,4 +1,5 @@
 ## Load and parse data
+## Setup --------------------
 library(tidyverse)
 library(forcats)
 
@@ -82,7 +83,7 @@ individual_df_unfltd = individual_df_unfltd %>%
                                       'Non-Academic' = '20'),
            permanent = permanent == '1')
 
-## Filtered
+## Filtered --------------------
 individual_df = individual_df_unfltd %>%
     filter(#permanent, 
         ## 0 and 10000 are placeholder university IDs
@@ -91,9 +92,16 @@ individual_df = individual_df_unfltd %>%
         !is.na(placing_univ_id), !is.na(placing_univ), 
         !is.na(hiring_univ_id), !is.na(hiring_univ))
 
-## University-level data
-univ_df = tibble(univ_id = c(individual_df$placing_univ_id, individual_df$hiring_univ_id),
-                 univ_name = c(individual_df$placing_univ, individual_df$hiring_univ)) %>%
+## University-level data --------------------
+## Clusters
+clusters_df = readxl::read_xlsx('00_testOfClustering.xlsx') %>%
+    mutate_if(is.numeric, as.character)
+
+## Build canonical names + attach clusters
+univ_df = tibble(univ_id = c(individual_df$placing_univ_id,
+                             individual_df$hiring_univ_id),
+                 univ_name = c(individual_df$placing_univ, 
+                               individual_df$hiring_univ)) %>%
     ## Canonical names
     group_by(univ_id, univ_name) %>%
     summarize(n = n()) %>%
@@ -101,8 +109,13 @@ univ_df = tibble(univ_id = c(individual_df$placing_univ_id, individual_df$hiring
     summarize(univ_name = first(univ_name[which(n == max(n))])) %>% 
     ungroup() %>%
     ## (Fake) AOS clusters
-    mutate(cluster_fake = as.factor(rep_len(1:4, nrow(.)))) %>%
+    # mutate(cluster_fake = as.factor(rep_len(1:4, nrow(.)))) %>%
+    ## Real AOS clusters
+    left_join(select(clusters_df, ID, cluster),
+                     by = c('univ_id' = 'ID')) %>%
     arrange(univ_name)
+
+## Calculate statistics from individual-level data
 univ_df = individual_df %>%
     ## Count number of (permanent) placements out of each program
     rename(univ_id = placing_univ_id) %>%
