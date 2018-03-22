@@ -2,6 +2,7 @@
 #' output:
 #'     html_document: 
 #'         self_contained: yes
+#'         toc: true
 #' ---
 
 ## Regression models of placement outcomes

@@ -2,9 +2,11 @@
 #' output:
 #'     html_document: 
 #'         self_contained: yes
+#'         toc: true
 #' ---
 
-#' # Findings #
+#' Findings
+#' --------------------
 #' - 25% of programs account for 50% of permanent placements
 #' - Centrality scores reveal a clear division between two groups of programs, with "high" and "low" scores.  
 #' - High output is only modestly correlated with centrality scores.  Programs like Notre Dame, CUNY, and UVA produce lots of PhDs, but they aren't placed at high-centrality programs.  
@@ -20,8 +22,7 @@ library(ggraph)
 ## Load data
 load('01_parsed.Rdata')
 
-#' ## Finding ##
-#' **25% of programs account for about 50% of (permanent) placements**
+#' **Finding: 25% of programs account for about 50% of (permanent) placements**
 ggplot(univ_df, aes(perm_placement_rank, frac_cum_perm_placements)) + 
     geom_step() +
     scale_x_continuous(labels = scales::percent_format(), 
@@ -89,8 +90,7 @@ ggplot(univ_df, aes(out_centrality, in_centrality,
 plotly::ggplotly()
 
 
-#' ## Finding ##
-#' **High output is only modestly correlated w/ centrality.** 
+#' **Finding: High output is only modestly correlated w/ centrality.** 
 #' Programs like ND, CUNY, New School produce lots of PhDs, but they aren't placed into the high-centrality departments. 
 ggplot(univ_df, aes(total_placements, log10(out_centrality)
                     )) +
@@ -174,8 +174,7 @@ univ_df = univ_df %>%
             select(univ_id = name, community) %>%
             mutate(community = as.character(community))})
 
-#' ## Finding ##
-#' **There is no correlation between semantic clusters and topological communities.**
+#' **Finding: There is no correlation between semantic clusters and topological communities.**
 univ_df %>%
     filter(!is.na(community), !is.na(cluster)) %>%
     select(community, cluster) %>%
@@ -271,8 +270,7 @@ individual_df %>%
     select(elite.x, elite.y) %>%
     table()
 
-#' ## Finding ##
-#' **Median permanent placement rate for elite programs is 14 points higher than for non-elite programs.** 
+#' **Finding: Median permanent placement rate for elite programs is 14 points higher than for non-elite programs.** 
 #' However, variation is also wide within each group; 
 #' even among elite programs, median permanent placement rate is only 58%. 
 #' This is also not yet controlling for graduation year, area, or demographics. 
