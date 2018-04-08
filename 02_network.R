@@ -10,10 +10,19 @@
 #' - 25% of programs account for 50% of permanent placements
 #' - Centrality scores reveal a clear division between two groups of programs, with "high" and "low" scores.  
 #' - High output is only modestly correlated with centrality scores.  Programs like Notre Dame, CUNY, and UVA produce lots of PhDs, but they aren't placed at high-centrality programs.  
+#' - There is no correlation between semantic clusters and topological communities. 
 #' - A closed group of 61 programs can be identified:  All recent hires by schools within this group received their PhD within this group.  This "elite" group corresponds exactly to the high-centrality programs.  
 #' - Median permanent placement rate is 14 points higher at elite programs (58% vs. 44% for non-elite programs).  
 #' - However, there is large variation in placement rate within both groups.  
-#' - There is no correlation between semantic clusters and topological communities. 
+#' - Elite status is highly stable; actual elite programs are almost always (>90%) elite in the rewired networks. 
+#' - A number of actual non-elite programs are often (>50%) elite in the rewired networks.  
+#'     - Notre Dame (86%)
+#'     - New School (71%)
+#'     - Penn State (65%)
+#'     - Tulane (62%)
+#'     - Boston College (61%)
+#'     - UC Boulder (56%)
+#' Within the actual categories, there is no correlation between counterfactual elite status and either (a) out-centrality and (b) the number of permanent placements.  
 
 library(tidyverse)
 library(igraph)
@@ -386,6 +395,59 @@ hiring_network_gc %>%
                         color = community_coarse)) +
     scale_color_brewer(palette = 'Set1', guide = FALSE) +
     theme_graph()
+
+
+
+#' Stability of elite status
+#' --------------------
+#' By randomly rewiring the network, we can test the stability of the elite/non-elite categories to data errors and the short time frame of our data.  In each of 500 permutations, we randomly rewire 10% of the edges in the permanent hiring network, then calculate out-centralities on the rewired network.  Using a threshold of 10^-7 for elite status, we count the fraction of rewired networks in which each program is elite.  
+system.time({
+    set.seed(13579)
+    permutations = 1:500 %>%
+        ## Rewire 10% of edges
+        map(~ {hiring_network %>%
+                rewire(keeping_degseq(loops = TRUE, 
+                                      niter = floor(.05 * length(E(.)))))}) %>%
+        ## Calculate out-centralities
+        map(~ {.x %>%
+                graph.reverse() %>%
+                eigen_centrality(directed = TRUE, weights = NA) %>%
+                .$vector}) %>%
+        transpose() %>%
+        map(unlist) %>%
+        ## Fraction where program is elite
+        map(~ sum(. > 10^-7) / length(.)) %>%
+        map(~ tibble(frac_elite = .)) %>%
+        bind_rows(.id = 'univ_id')
+})
+
+## frac_elite indicates the fraction of permutations in which the program was elite
+ggplot(permutations, aes(frac_elite)) + 
+    geom_density() + 
+    geom_rug()
+
+univ_df = left_join(univ_df, permutations)
+
+#' **Finding:** Elite status is highly stable; actual elite programs are almost always (>90%) elite in the rewired networks. 
+#' 
+#' **Finding:** A number of actual non-elite programs are often (>50%) elite in the rewired networks.  
+#' - Notre Dame (86%)
+#' - New School (71%)
+#' - Penn State (65%)
+#' - Tulane (62%)
+#' - Boston College (61%)
+#' - UC Boulder (56%)
+#' 
+#' **Finding:** Within the actual categories, there is no correlation between counterfactual elite status and either (a) out-centrality and (b) the number of permanent placements.  
+ggplot(univ_df, aes(log10(out_centrality), frac_elite, 
+                    text = univ_name)) + 
+    geom_point()
+plotly::ggplotly()
+
+ggplot(univ_df, aes(perm_placements, frac_elite)) + 
+    geom_point()
+
+
 
 ## Save university-level data with network statistics
 save(univ_df, file = '02_univ_net_stats.Rdata')
