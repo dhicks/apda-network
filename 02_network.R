@@ -89,6 +89,7 @@ univ_df = univ_df %>%
 #     stat_function(fun = function (x) x)
 
 
+
 #' Exploring centrality scores
 #' --------------------
 #' There are two clear groups of centrality scores, with high scores (in the range of 10^-5 to 1) and low scores (10^-15 and smaller). 
@@ -108,6 +109,36 @@ ggplot(univ_df, aes(out_centrality, in_centrality,
     geom_jitter() + 
     scale_x_log10() + scale_y_log10()
 plotly::ggplotly()
+
+# ## Check stability of centrality calculation
+# iterated_centrality = 1:500 %>%
+#     map(~ {hiring_network %>%
+#             graph.reverse() %>%
+#             eigen_centrality(directed = TRUE, weights = NA) %>%
+#             .$vector}) %>%
+#     transpose() %>%
+#     map(unlist) %>%
+#     map(~ tibble(out_centrality = .)) %>%
+#     bind_rows(.id = 'univ_id') %>%
+#     group_by(univ_id) %>%
+#     summarize(min = min(out_centrality),
+#               max = max(out_centrality),
+#               median = median(out_centrality))
+# 
+# ## Lots of variation among non-elites
+# ggplot(iterated_centrality, 
+#        aes(reorder(univ_id, median), 
+#            median)) + 
+#     geom_pointrange(aes(ymin = min, ymax = max)) + 
+#     scale_y_log10()
+# 
+# ## But extremely stable results among elites
+# iterated_centrality %>%
+#     filter(min > 10^-11) %>%
+#     ggplot(aes(reorder(univ_id, median), 
+#                median)) + 
+#     geom_pointrange(aes(ymin = min, ymax = max)) + 
+#     scale_y_log10()
 
 
 #' **Finding: High output is only modestly correlated w/ centrality.** 
@@ -133,21 +164,39 @@ ggplot(univ_df, aes(perm_placement_rate, log10(out_centrality),
     geom_point()
 plotly::ggplotly()
 
-## While individuals can move from low to high centrality in temporary positions, this never happens with permanent positions.  However, this is expected from the way centrality is calculated.  
-# dataf %>%
-#     # filter(permanent) %>%
+## Movement w/in elites
+# individual_df %>% 
+#     filter(permanent) %>%
 #     left_join(select(univ_df, univ_id, out_centrality), 
-#           by = c('placing_univ_id' = 'univ_id')) %>%
-#     left_join(select(univ_df, univ_id, out_centrality), 
+#               by = c('placing_univ_id' = 'univ_id')) %>%
+#     left_join(select(univ_df, univ_id, out_centrality),
 #               by = c('hiring_univ_id' = 'univ_id')) %>%
-#     ggplot(aes(log10(out_centrality.x), 
-#                log10(out_centrality.y))) + 
-#     geom_point() + 
-#     xlab('Placing University Centrality') +
-#     ylab('Hiring University Centrality') +
-#     stat_function(fun = function (x) x, linetype = 'dashed') +
-#     facet_grid(~ permanent)
+#     filter(out_centrality.y > 10^-10) %>%
+#     select(person_id, 
+#            placing = out_centrality.x, 
+#            hiring = out_centrality.y) %>%
+#     gather(variable, value, -person_id) %>%
+#     mutate(variable = fct_rev(variable)) %>%
+#     ggplot(aes(variable, log10(value))) + 
+#     geom_point() +
+#     geom_line(aes(group = person_id))
 
+## Diagonal line indicates where hiring program has the same centrality as the placing program.  
+## Most placements are below this line, indicating that the centrality measure captures the idea that people typically are hired by programs with lower status
+## The few placements above the line indicate that, even when individuals are hired by programs with higher status, the increase is relatively minor:  no more than 1 point on the log10 scale
+individual_df %>% 
+    filter(permanent) %>%
+    left_join(select(univ_df, univ_id, out_centrality), 
+              by = c('placing_univ_id' = 'univ_id')) %>%
+    left_join(select(univ_df, univ_id, out_centrality),
+              by = c('hiring_univ_id' = 'univ_id')) %>%
+    filter(out_centrality.y > 10^-10) %>%
+    select(person_id, 
+           placing = out_centrality.x, 
+           hiring = out_centrality.y) %>%
+    ggplot(aes(log10(placing), log10(hiring))) + 
+    geom_point() + 
+    stat_function(fun = function (x) x)
 
 
 
