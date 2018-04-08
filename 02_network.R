@@ -46,7 +46,8 @@ components(hiring_network)$csize
 #' Out- and in-centrality
 set.seed(42)
 V(hiring_network)$in_centrality = eigen_centrality(hiring_network, 
-                                                   directed = TRUE)$vector
+                                                   directed = TRUE,
+                                                   weights = NA)$vector
 graph.reverse <- function (graph) {
     if (!is.directed(graph))
         return(graph)
@@ -60,13 +61,32 @@ graph.reverse <- function (graph) {
 }
 V(hiring_network)$out_centrality = hiring_network %>%
     graph.reverse() %>%
-    eigen_centrality(directed = TRUE) %>%
+    eigen_centrality(directed = TRUE, weights = NA) %>%
     .$vector
 
 ## Add centrality statistics to the university df
 univ_df = univ_df %>%
     mutate(out_centrality = V(hiring_network)[univ_df$univ_id]$out_centrality, 
            in_centrality = V(hiring_network)[univ_df$univ_id]$in_centrality)
+
+## Check relationship btwn unweighted multiedges and weighted edges
+## Strong correlation, esp by approx rank and elite/non-elite
+## But some movement, both numerically and ordinally
+# E(hiring_network)$weight = count_multiple(hiring_network)
+# hiring_network_simp = simplify(hiring_network)
+# 
+# set.seed(42)
+# V(hiring_network_simp)$out_centrality = hiring_network_simp %>%
+#     graph.reverse() %>%
+#     eigen_centrality(directed = TRUE) %>%
+#     .$vector
+# 
+# tibble(name = V(hiring_network)$univ_name,
+#        multi = V(hiring_network)$out_centrality,
+#        simp = V(hiring_network_simp)$out_centrality) %>%
+#     ggplot(aes(log10(simp), log10(multi))) + 
+#     geom_point() +
+#     stat_function(fun = function (x) x)
 
 
 #' Exploring centrality scores
