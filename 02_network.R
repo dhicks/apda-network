@@ -22,7 +22,7 @@
 #'     - Tulane (62%)
 #'     - Boston College (61%)
 #'     - UC Boulder (56%)
-#' Within the actual categories, there is no correlation between counterfactual elite status and either (a) out-centrality and (b) the number of permanent placements.  
+#' - Within the actual categories, there is no correlation between counterfactual elite status and either (a) out-centrality and (b) the number of permanent placements.  
 
 library(tidyverse)
 library(igraph)
@@ -360,44 +360,6 @@ ggplot(univ_df, aes(elite, perm_placement_rate,
 plotly::ggplotly()
 
 
-#' Plotting
-#' --------------------
-#' Coarser community structure
-large_clusters = which(sizes(communities) > 100)
-V(hiring_network_gc)$community_coarse = ifelse(
-    V(hiring_network_gc)$community %in% large_clusters, 
-    V(hiring_network_gc)$community, 
-    'other')
-
-#' FR
-hiring_network_gc %>%
-    induced_subgraph(which(degree(., mode = 'out') > 10)) %>%
-    ggraph() +
-    # geom_node_label(aes(label = univ_name, 
-    #                     size = log10(1 + out_centrality), 
-    #                     color = as.factor(community))) +
-    geom_edge_fan(arrow = arrow(length = unit(.01, 'npc')), 
-                  spread = 5) +
-    geom_node_point(aes(size = log10(1 + out_centrality), 
-                        # color = as.factor(community))) +
-                        color = community_coarse)) +
-    scale_color_brewer(palette = 'Set1', guide = FALSE) +
-    scale_size(range = c(2, 6)) +
-    theme_graph()
-
-#' Chord diagram
-hiring_network_gc %>%
-    induced_subgraph(which(degree(., mode = 'out') > 1)) %>%
-    ggraph(layout = 'linear', sort.by = 'community_coarse', circular = TRUE) +
-    geom_edge_arc(arrow = arrow(length = unit(.01, 'npc')), alpha = .1) +
-    geom_node_point(aes(size = log10(1 + out_centrality), 
-                        # color = as.factor(community))) +
-                        color = community_coarse)) +
-    scale_color_brewer(palette = 'Set1', guide = FALSE) +
-    theme_graph()
-
-
-
 #' Stability of elite status
 #' --------------------
 #' By randomly rewiring the network, we can test the stability of the elite/non-elite categories to data errors and the short time frame of our data.  In each of 500 permutations, we randomly rewire 10% of the edges in the permanent hiring network, then calculate out-centralities on the rewired network.  Using a threshold of 10^-7 for elite status, we count the fraction of rewired networks in which each program is elite.  
@@ -448,6 +410,42 @@ ggplot(univ_df, aes(perm_placements, frac_elite)) +
     geom_point()
 
 
+
+#' Plotting
+#' --------------------
+#' Coarser community structure
+large_clusters = which(sizes(communities) > 100)
+V(hiring_network_gc)$community_coarse = ifelse(
+    V(hiring_network_gc)$community %in% large_clusters, 
+    V(hiring_network_gc)$community, 
+    'other')
+
+#' FR
+hiring_network_gc %>%
+    induced_subgraph(which(degree(., mode = 'out') > 10)) %>%
+    ggraph() +
+    # geom_node_label(aes(label = univ_name, 
+    #                     size = log10(1 + out_centrality), 
+    #                     color = as.factor(community))) +
+    geom_edge_fan(arrow = arrow(length = unit(.01, 'npc')), 
+                  spread = 5) +
+    geom_node_point(aes(size = log10(1 + out_centrality), 
+                        # color = as.factor(community))) +
+                        color = community_coarse)) +
+    scale_color_brewer(palette = 'Set1', guide = FALSE) +
+    scale_size(range = c(2, 6)) +
+    theme_graph()
+
+#' Chord diagram
+hiring_network_gc %>%
+    induced_subgraph(which(degree(., mode = 'out') > 1)) %>%
+    ggraph(layout = 'linear', sort.by = 'community_coarse', circular = TRUE) +
+    geom_edge_arc(arrow = arrow(length = unit(.01, 'npc')), alpha = .1) +
+    geom_node_point(aes(size = log10(1 + out_centrality), 
+                        # color = as.factor(community))) +
+                        color = community_coarse)) +
+    scale_color_brewer(palette = 'Set1', guide = FALSE) +
+    theme_graph()
 
 ## Save university-level data with network statistics
 save(univ_df, file = '02_univ_net_stats.Rdata')
