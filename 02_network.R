@@ -66,7 +66,12 @@ graph.reverse <- function (graph) {
     neworder[1:2] <- c(2,1)
     e <- e[neworder]
     names(e) <- names(e)[neworder]
-    graph.data.frame(e, vertices = get.data.frame(graph, what="vertices"))
+    vertex_df = get.data.frame(graph, what = 'vertices')
+    if (ncol(vertex_df) > 0) {
+        return(graph.data.frame(e, vertices = vertex_df))
+    } else {
+        return(graph.data.frame(e))
+    }
 }
 V(hiring_network)$out_centrality = hiring_network %>%
     graph.reverse() %>%
@@ -148,6 +153,26 @@ plotly::ggplotly()
 #                median)) + 
 #     geom_pointrange(aes(ymin = min, ymax = max)) + 
 #     scale_y_log10()
+
+#' We completely rewire the network, preserving out-degree (number of new PhDs) and in-degree (number of permanent hires), then calculate out-centrality again.  The plots below show the out-centrality distributions for each random rewiring, with the actual distribution in red.  The distributions are always bimodal, indicating that the observed bimodiality is due in part to the way PhD production and hiring are distributed across institutions.  However, the high-centrality subset is never as small as in the actual hiring network.  This indicates that bimodiality is not due *only* to the degree distributions.  Some other factor is *exacerbating* social inequality in the hiring network.  
+set.seed(78910)
+map(1:100, 
+    ~ sample_degseq(degree(hiring_network, mode = 'out'), 
+                    degree(hiring_network, mode = 'in'))
+) %>%
+    map(graph.reverse) %>%
+    map(eigen_centrality, directed = TRUE, weights = NULL) %>%
+    map(~ .$vector) %>%
+    map(log10) %>%
+    map(density) %>%
+    map(~ tibble(x = .$x, y = .$y)) %>%
+    bind_rows(.id = 'iteration') %>%
+    ggplot(aes(x, y)) + 
+    geom_line(aes(group = iteration), alpha = .5) + 
+    stat_density(data = univ_df, geom = 'line',
+                 aes(log10(out_centrality), ..density..), 
+                 color = 'red', size = 1) +
+    xlim(NA, 0)
 
 
 #' **Finding: High output is only modestly correlated w/ centrality.** 
