@@ -11,18 +11,18 @@
 #' - Centrality scores reveal a clear division between two groups of programs, with "high" and "low" scores.  
 #' - High output is only modestly correlated with centrality scores.  Programs like Notre Dame, CUNY, and UVA produce lots of PhDs, but they aren't placed at high-centrality programs.  
 #' - There is no correlation between semantic clusters and topological communities. 
-#' - A closed group of 61 programs can be identified:  All recent hires by schools within this group received their PhD within this group.  This "elite" group corresponds exactly to the high-centrality programs.  
-#' - Median permanent placement rate is 14 points higher at elite programs (58% vs. 44% for non-elite programs).  
+#' - A closed group of 61 programs can be identified:  All recent hires by schools within this group received their PhD within this group.  This "high-prestige" group corresponds exactly to the high-centrality programs.  
+#' - Median permanent placement rate is 14 points higher at high-prestige programs (58% vs. 44% for low-prestige programs).  
 #' - However, there is large variation in placement rate within both groups.  
-#' - Elite status is highly stable; actual elite programs are almost always (>90%) elite in the rewired networks. 
-#' - A number of actual non-elite programs are often (>50%) elite in the rewired networks.  
+#' - High-prestige status is highly stable; actual high-prestige programs are almost always (>90%) high-prestige in the rewired networks. 
+#' - A number of actual low-prestige programs are often (>50%) high-prestige in the rewired networks.  
 #'     - Notre Dame (86%)
 #'     - New School (71%)
 #'     - Penn State (65%)
 #'     - Tulane (62%)
 #'     - Boston College (61%)
 #'     - UC Boulder (56%)
-#' - Within the actual categories, there is no correlation between counterfactual elite status and either (a) out-centrality and (b) the number of permanent placements.  
+#' - Within the actual categories, there is no correlation between counterfactual prestige status and either (a) out-centrality and (b) the number of permanent placements.  
 
 library(tidyverse)
 library(igraph)
@@ -84,7 +84,7 @@ univ_df = univ_df %>%
            in_centrality = V(hiring_network)[univ_df$univ_id]$in_centrality)
 
 ## Check relationship btwn unweighted multiedges and weighted edges
-## Strong correlation, esp by approx rank and elite/non-elite
+## Strong correlation, esp by approx rank and high/low prestige
 ## But some movement, both numerically and ordinally
 # E(hiring_network)$weight = count_multiple(hiring_network)
 # hiring_network_simp = simplify(hiring_network)
@@ -139,14 +139,14 @@ plotly::ggplotly()
 #               max = max(out_centrality),
 #               median = median(out_centrality))
 # 
-# ## Lots of variation among non-elites
+# ## Lots of variation among low-prestige
 # ggplot(iterated_centrality, 
 #        aes(reorder(univ_id, median), 
 #            median)) + 
 #     geom_pointrange(aes(ymin = min, ymax = max)) + 
 #     scale_y_log10()
 # 
-# ## But extremely stable results among elites
+# ## But extremely stable results among high-prestige
 # iterated_centrality %>%
 #     filter(min > 10^-11) %>%
 #     ggplot(aes(reorder(univ_id, median), 
@@ -154,7 +154,8 @@ plotly::ggplotly()
 #     geom_pointrange(aes(ymin = min, ymax = max)) + 
 #     scale_y_log10()
 
-#' We completely rewire the network, preserving out-degree (number of new PhDs) and in-degree (number of permanent hires), then calculate out-centrality again.  The plots below show the out-centrality distributions for each random rewiring, with the actual distribution in red.  The distributions are always bimodal, indicating that the observed bimodiality is due in part to the way PhD production and hiring are distributed across institutions.  However, the high-centrality subset is never as small as in the actual hiring network.  This indicates that bimodiality is not due *only* to the degree distributions.  Some other factor is *exacerbating* social inequality in the hiring network.  
+#' We completely rewire the network, preserving out-degree (number of new PhDs) and in-degree (number of permanent hires), but otherwise randomly matching job-seekers to positions.  We then recalculate out-centrality.  The plots below show the out-centrality distributions for each random rewiring, with the actual distribution in red.  The distributions are always bimodal, indicating that **the observed split into high- and low-centrality programs is due in part to the way PhD production and hiring are distributed across institutions**.  However, the high-centrality subset is never as small as in the actual hiring network.  This indicates that **bimodiality is not due only to the degree distributions**.  Some other factor is exacerbating the structural inequality in the hiring network.  
+#' 
 set.seed(78910)
 map(1:100, 
     ~ sample_degseq(degree(hiring_network, mode = 'out'), 
@@ -177,8 +178,7 @@ map(1:100,
 
 #' **Finding: High output is only modestly correlated w/ centrality.** 
 #' Programs like ND, CUNY, New School produce lots of PhDs, but they aren't placed into the high-centrality departments. 
-ggplot(univ_df, aes(total_placements, log10(out_centrality)
-                    )) +
+ggplot(univ_df, aes(total_placements, log10(out_centrality))) +
     geom_point(aes(text = univ_name))
 plotly::ggplotly()
 
@@ -198,7 +198,7 @@ ggplot(univ_df, aes(perm_placement_rate, log10(out_centrality),
     geom_point()
 plotly::ggplotly()
 
-## Movement w/in elites
+## Movement w/in high-prestige group
 # individual_df %>% 
 #     filter(permanent) %>%
 #     left_join(select(univ_df, univ_id, out_centrality), 
@@ -302,7 +302,7 @@ univ_df %>%
                        name = 'Semantic\nclusters')
 
 
-#' Core elite universities
+#' High-prestige universities
 #' --------------------
 ## Start w/ Oxford, and work upstream
 ## Only need to go 8 steps to get closure
@@ -315,26 +315,26 @@ univ_df %>%
            size = unlist(.)) %>%
     ggplot(aes(order, size)) + geom_point()
 
-elites = make_ego_graph(hiring_network, order = 8, 
+prestigious = make_ego_graph(hiring_network, order = 8, 
                         nodes = '512', 
                         mode = 'in') %>%
     .[[1]]
 
-## How large is the elite community?  
+## How large is the high-prestige community?  
 ## 61 programs; 6% of all programs in the network; 
 ## 39% of programs with at least 1 placement in the dataset
-length(V(elites))
-length(V(elites)) / length(V(hiring_network))
-length(V(elites)) / sum(!is.na(univ_df$total_placements))
+length(V(prestigious))
+length(V(prestigious)) / length(V(hiring_network))
+length(V(prestigious)) / sum(!is.na(univ_df$total_placements))
 
-## What fraction of hires are within elites?  
+## What fraction of hires are within high-prestige?  
 ## 15% of all permanent hires; 7% of all hires
-length(E(elites)) / length(E(hiring_network))
-length(E(elites)) / nrow(individual_df)
+length(E(prestigious)) / length(E(hiring_network))
+length(E(prestigious)) / nrow(individual_df)
 
-# png(file = '02_elite_net.png', 
+# png(file = '02_prestigious_net.png', 
 #     width = 11, height = 11, units = 'in', res = 400)
-ggraph(elites) + 
+ggraph(prestigious) + 
     geom_node_label(aes(label = univ_name, 
                         size = log10(out_centrality))) + 
     geom_edge_fan(arrow = arrow(length = unit(.01, 'npc')), 
@@ -344,40 +344,42 @@ ggraph(elites) +
     theme_graph()
 # dev.off()
 
-## "Elite" status = high centrality group
+## High-prestige = high centrality group
 univ_df = univ_df %>%
-    mutate(elite = univ_id %in% V(elites)$name)
+    mutate(prestige = ifelse(univ_id %in% V(prestigious)$name, 
+                                'high-prestige', 
+                                'low-prestige'))
 
-ggplot(univ_df, aes(elite, log10(out_centrality))) + 
+ggplot(univ_df, aes(prestige, log10(out_centrality))) + 
     geom_jitter()
 
-## "Elite" status and clusters
-## Elites basically don't appear in clusters 2, 3, 7
+## Prestige status and clusters
+## High-prestige basically don't appear in clusters 2, 3, 7
 univ_df %>%
     filter(!is.na(cluster)) %>%
-    ggplot(aes(cluster, color = elite)) + 
+    ggplot(aes(cluster, color = prestige)) + 
     geom_point(stat = 'count') +
-    geom_line(aes(group = elite), stat = 'count')
-## Elites are mostly confined to the 3 large communities
+    geom_line(aes(group = prestige), stat = 'count')
+## High-prestige are mostly confined to the 3 large communities
 univ_df %>%
     filter(!is.na(community)) %>%
-    ggplot(aes(as.integer(community), fill = elite)) + 
+    ggplot(aes(as.integer(community), fill = prestige)) + 
     geom_bar()
 
-## What fraction of elite graduates end up in elite programs? 
+## What fraction of high-prestige graduates end up in high-prestige programs? 
 ## 221 / (221 + 569) = 28% of those w/ permanent placements
 individual_df %>%
     filter(permanent) %>%
     left_join(univ_df, by = c('placing_univ_id' = 'univ_id')) %>%
     left_join(univ_df, by = c('hiring_univ_id' = 'univ_id')) %>%
-    select(elite.x, elite.y) %>%
+    select(prestige.x, prestige.y) %>%
     table()
 
-#' **Finding: Median permanent placement rate for elite programs is 14 points higher than for non-elite programs.** 
+#' **Finding: Median permanent placement rate for high-prestige programs is 14 points higher than for low-prestige programs.** 
 #' However, variation is also wide within each group; 
-#' even among elite programs, median permanent placement rate is only 58%. 
+#' even among high-prestige programs, median permanent placement rate is only 58%. 
 #' This is also not yet controlling for graduation year, area, or demographics. 
-ggplot(univ_df, aes(elite, perm_placement_rate, 
+ggplot(univ_df, aes(prestige, perm_placement_rate, 
                     label = univ_name)) + 
     geom_boxplot(color = 'red') +
     geom_jitter() +
@@ -385,9 +387,9 @@ ggplot(univ_df, aes(elite, perm_placement_rate,
 plotly::ggplotly()
 
 
-#' Stability of elite status
+#' Stability of prestige status
 #' --------------------
-#' By randomly rewiring the network, we can test the stability of the elite/non-elite categories to data errors and the short time frame of our data.  In each of 500 permutations, we randomly rewire 10% of the edges in the permanent hiring network, then calculate out-centralities on the rewired network.  Using a threshold of 10^-7 for elite status, we count the fraction of rewired networks in which each program is elite.  
+#' By randomly rewiring the network, we can test the stability of the prestige categories to data errors and the short time frame of our data.  In each of 500 permutations, we randomly rewire 10% of the edges in the permanent hiring network, then calculate out-centralities on the rewired network.  Using a threshold of 10^-7 for high-prestige status, we count the fraction of rewired networks in which each program is high-prestige.  
 system.time({
     set.seed(13579)
     permutations = 1:500 %>%
@@ -402,22 +404,22 @@ system.time({
                 .$vector}) %>%
         transpose() %>%
         map(unlist) %>%
-        ## Fraction where program is elite
+        ## Fraction where program is high-prestige
         map(~ sum(. > 10^-7) / length(.)) %>%
-        map(~ tibble(frac_elite = .)) %>%
+        map(~ tibble(frac_high_prestige = .)) %>%
         bind_rows(.id = 'univ_id')
 })
 
-## frac_elite indicates the fraction of permutations in which the program was elite
-ggplot(permutations, aes(frac_elite)) + 
+## frac_high_prestige indicates the fraction of permutations in which the program was high-prestige
+ggplot(permutations, aes(frac_high_prestige)) + 
     geom_density() + 
     geom_rug()
 
 univ_df = left_join(univ_df, permutations)
 
-#' **Finding:** Elite status is highly stable; actual elite programs are almost always (>90%) elite in the rewired networks. 
+#' **Finding:** High-prestige status is highly stable; actual high-prestige programs are almost always (>90%) high-prestige in the rewired networks. 
 #' 
-#' **Finding:** A number of actual non-elite programs are often (>50%) elite in the rewired networks.  
+#' **Finding:** A number of actual non-high-prestige programs are often (>50%) high-prestige in the rewired networks.  
 #' - Notre Dame (86%)
 #' - New School (71%)
 #' - Penn State (65%)
@@ -425,16 +427,31 @@ univ_df = left_join(univ_df, permutations)
 #' - Boston College (61%)
 #' - UC Boulder (56%)
 #' 
-#' **Finding:** Within the actual categories, there is no correlation between counterfactual elite status and either (a) out-centrality and (b) the number of permanent placements.  
-ggplot(univ_df, aes(log10(out_centrality), frac_elite, 
+#' **Finding:** Within the actual categories, there is no correlation between counterfactual high-prestige status and either (a) out-centrality and (b) the number of permanent placements.  
+ggplot(univ_df, aes(log10(out_centrality), frac_high_prestige, 
                     text = univ_name)) + 
     geom_point()
 plotly::ggplotly()
 
-ggplot(univ_df, aes(perm_placements, frac_elite)) + 
+ggplot(univ_df, aes(perm_placements, frac_high_prestige)) + 
     geom_point()
 
+#' Among low-status programs, a likely explanation is the size of the program's total downstream network.  Notre Dame's is fairly large, with many potential PhDs; if rewiring leads any of these PhDs to a high-status position, both their PhD institution and Notre Dame join the high-status group.  UC Boulder's downstream network is smaller, with fewer opportunities to place into a high-status position.  
 
+make_ego_graph(hiring_network, order = 10, 
+               nodes = c('314', '260'),
+               mode = 'out') %>% 
+    disjoint_union() %>%
+    induced_subgraph(., 
+                     which(!is.na(V(.)$perm_placements))) %>%
+    ggraph() + 
+    geom_node_label(aes(label = univ_name, 
+                        size = perm_placements)) + 
+    geom_edge_fan(arrow = arrow(angle = 45, 
+                                length = unit(.1, 'inches'), 
+                                type = 'closed')) +
+    scale_label_size(range = c(0, 1.5), name = 'placements') + 
+    theme_graph()
 
 #' Plotting
 #' --------------------
