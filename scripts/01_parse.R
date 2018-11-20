@@ -1,26 +1,36 @@
 ## Load and parse data
 ## Setup --------------------
 library(tidyverse)
-library(forcats)
 
-individual_df_unfltd = readxl::read_excel('queryjan92018.xlsx', 
-                           na = c('', 'NULL'), 
-                           col_names = c('person_id',
-                                         'aos_category',
-                                         'aos',
-                                         'graduation_year',
-                                         'placing_univ_id',
-                                         'placing_univ',
-                                         'placement_year',
-                                         'hiring_univ_id', 
-                                         'hiring_univ', 
-                                         'position_type',
-                                         'permanent'), 
-                           col_types = 'text',
-                           skip = 1)
+data_folder = '../data/'
 
-individual_df_unfltd = individual_df_unfltd %>%
-    mutate(aos_category = fct_recode(aos_category, 
+individual_df_raw = read_csv(str_c(data_folder, 
+                                   '00_query_result_2018-11-09.csv'), 
+                             na = c('', 'NULL'), 
+                             col_names = c('person_id',
+                                           'gender', 
+                                           'ethnicity', 
+                                           'race',
+                                           'aos_category',
+                                           'aos',
+                                           'graduation_year',
+                                           'placing_univ_id',
+                                           'placing_univ',
+                                           'placement_year',
+                                           'hiring_univ_id', 
+                                           'hiring_univ', 
+                                           'position_type'), 
+                             col_types = str_dup('c', 13),
+                             skip = 1)
+
+individual_df_unfltd = individual_df_raw %>%
+    mutate(gender = fct_recode(gender, 
+                               'm' = '1', 
+                               'w' = '2', 
+                               NULL = '3', 
+                               'o' = '4', 
+                               NULL = '5'),
+           aos_category = fct_recode(aos_category, 
                                      NULL = '1',
                                      'LEMM' = '2',
                                      'Value Theory' = '3',
@@ -68,6 +78,9 @@ individual_df_unfltd = individual_df_unfltd %>%
                             'Other 1' = '41'), 
            graduation_year = as.integer(graduation_year),
            placement_year = as.integer(placement_year),
+           placing_univ = str_replace(placing_univ, '__ÃŒÃ¶', "'"),
+           hiring_univ = str_replace(hiring_univ, '__ÃŒÃ¶', "'"),
+           permanent = as.integer(position_type) <= 5,
            position_type = fct_recode(position_type, 
                                       'Tenure-Track' = '1',
                                       'Lecturer (Permanent)' = '2', 
@@ -80,22 +93,49 @@ individual_df_unfltd = individual_df_unfltd %>%
                                       'Instructor (Temporary)' = '14', 
                                       'Adjunct (Temporary)' = '15', 
                                       'Other (Temporary)' = '16', 
-                                      'Non-Academic' = '20'),
-           permanent = permanent == '1')
+                                      'Non-Academic' = '20'))
 
-## Filtered --------------------
+## To ID erroneous universities:  
+# universities = readxl::read_excel('00_HicksData.xlsx',
+#                                   sheet = 'Universities') %>%
+#     mutate(hiring_univ_id = as.character(`university id`))
+# anti_join(individual_df_unfltd, universities) %>%
+#     filter(graduation_year >= 2012,
+#            graduation_year <= 2016,
+#            placement_year >= 2012) %>% View
+
+
+## Filtering --------------------
+## No more 0s in placing_univ_id, but some NAs
+count(individual_df_unfltd, placing_univ_id == '0')
+## Still some 10000s = placing univ is Unknown
+count(individual_df_unfltd, placing_univ_id == '10000')
+# individual_df_unfltd %>% filter(placing_univ_id == '10000') %>% View
+
+## No 10000s in hiring_univ_id, but some NAs
+count(individual_df_unfltd, hiring_univ_id == '10000')
+
 individual_df = individual_df_unfltd %>%
-    filter(#permanent, 
-        ## 0 and 10000 are placeholder university IDs
+    filter(## Remove error code university IDs
         placing_univ_id != '0', placing_univ_id != '10000',
-        hiring_univ_id != '0', hiring_univ_id != '10000',
+        !(hiring_univ_id %in% c('0', '10000')),
         !is.na(placing_univ_id), !is.na(placing_univ), 
-        !is.na(hiring_univ_id), !is.na(hiring_univ))
+        !is.na(hiring_univ_id), !is.na(hiring_univ), 
+        ## Only have good data for 2012-2016
+        ## Still have about half as many 2017 grads as 2012-2016 average
+        graduation_year >= 2012, graduation_year <= 2016, 
+        placement_year >= 2012
+    )
 
 ## University-level data --------------------
 ## Clusters
-clusters_df = readxl::read_xlsx('00_testOfClustering.xlsx') %>%
+clusters_df = read_csv(str_c(data_folder, 
+                             '00_clusterDataIsomapknn50.csv')) %>% 
+    rename(ID = X1) %>%
+    rename_at(vars(contains('Lvl')), 
+              funs(str_c('cluster_', tolower(.)))) %>%
     mutate_if(is.numeric, as.character)
+
 
 ## Build canonical names + attach clusters
 univ_df = tibble(univ_id = c(individual_df$placing_univ_id,
@@ -108,16 +148,15 @@ univ_df = tibble(univ_id = c(individual_df$placing_univ_id,
     group_by(univ_id) %>%
     summarize(univ_name = first(univ_name[which(n == max(n))])) %>% 
     ungroup() %>%
-    ## (Fake) AOS clusters
-    # mutate(cluster_fake = as.factor(rep_len(1:4, nrow(.)))) %>%
-    ## Real AOS clusters
-    left_join(select(clusters_df, ID, cluster),
-                     by = c('univ_id' = 'ID')) %>%
+    ## AOS clusters
+    left_join(select(clusters_df, ID, starts_with('cluster')),
+              by = c('univ_id' = 'ID')) %>%
     arrange(univ_name)
 
-## Calculate statistics from individual-level data
-univ_df = individual_df %>%
-    ## Count number of (permanent) placements out of each program
+## Placement totals, rates, and cumulative distributions
+## These *do* include non-academic placements, which *do not* count as permanent
+placement_df = individual_df %>%
+    ## Count number of total & perm placements out of each program
     rename(univ_id = placing_univ_id) %>%
     group_by(univ_id) %>%
     summarize(total_placements = n(),
@@ -125,11 +164,34 @@ univ_df = individual_df %>%
     mutate(perm_placement_rate = perm_placements / total_placements) %>%
     ## Fractions and cumulative sums
     arrange(desc(perm_placements)) %>%
-    mutate(frac_perm_placements = perm_placements / sum(perm_placements, na.rm = TRUE),
-           cum_perm_placements = cumsum(ifelse(is.na(perm_placements), 0, perm_placements)), 
+    mutate(frac_perm_placements = perm_placements / sum(perm_placements, 
+                                                        na.rm = TRUE),
+           cum_perm_placements = cumsum(ifelse(is.na(perm_placements), 
+                                               0, 
+                                               perm_placements)), 
            frac_cum_perm_placements = cum_perm_placements / 
                sum(perm_placements, na.rm = TRUE),
-           perm_placement_rank = percent_rank(cum_perm_placements)) %>%
-    left_join(univ_df, .)
+           perm_placement_rank = percent_rank(cum_perm_placements))
 
-save(individual_df_unfltd, individual_df, univ_df, file = '01_parsed.Rdata')
+## Program-level AOS diversity
+h_df = individual_df %>%
+    count(univ_id = placing_univ_id, aos_category) %>%
+    group_by(univ_id) %>%
+    mutate(frac = n / sum(n)) %>%
+    summarize(aos_diversity = -sum(frac * log2(frac)))
+
+## Program-level fraction women, other
+gender_df = individual_df %>%
+    count(univ_id = placing_univ_id, gender) %>%
+    spread(key = gender, value = n, fill = 0) %>%
+    rename(m_count = m, w_count = w, gender_na_count = `<NA>`) %>%
+    mutate(frac_w = w_count / (m_count + w_count + gender_na_count))
+
+## Combine program-level dataframes
+univ_df = univ_df %>%
+    left_join(placement_df) %>%
+    left_join(h_df) %>%
+    left_join(gender_df)
+
+save(individual_df_unfltd, individual_df, univ_df, 
+     file = str_c(data_folder, '01_parsed.Rdata'))
