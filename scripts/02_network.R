@@ -5,8 +5,8 @@
 #'         toc: true
 #' ---
 
-TODO: 
-- rewrite text
+# TODO: 
+# - rewrite text
 
 #' Findings
 #' --------------------
@@ -31,6 +31,9 @@ library(tidyverse)
 library(igraph)
 library(tidygraph)
 library(ggraph)
+library(broom)
+
+library(tictoc)
 
 data_folder = '../data/'
 
@@ -126,7 +129,7 @@ hiring_network = hiring_network %>%
 #' There are two clear groups of centrality scores, with high scores (in the range of 10^-12 to 1) and low scores (10^-15 and smaller). 
 ##
 ## NB there seem to be (small?) differences in scores (at the low end?) across runs of the centrality algorithm
-ggplot(as_tibble(hiring_network_), aes(out_centrality)) + 
+ggplot(as_tibble(hiring_network), aes(out_centrality)) + 
     geom_density() + geom_rug() +
     scale_x_continuous(trans = 'log10')
 
@@ -292,7 +295,7 @@ hiring_network_gc = hiring_network %>%
 #+ community_detection_params, cache = TRUE
 walk_len = rep(2:100, 1)
 ## ~24 sec
-tictoc::tic()
+tic()
 comm_stats = walk_len %>%
     map(~ cluster_walktrap(hiring_network_gc, steps = .x)) %>%
     map(~ list(sizes = sizes(.x), length = length(.x))) %>%
@@ -300,7 +303,7 @@ comm_stats = walk_len %>%
                      n_comms = .x$length)) %>%
     mutate(walk_len = walk_len,
            delta_H = log2(n_comms) - H)
-tictoc::toc()
+toc()
 
 ggplot(comm_stats, aes(walk_len, H)) +
     geom_point() +
@@ -445,7 +448,7 @@ plotly::ggplotly()
 #' --------------------
 #' By randomly rewiring the network, we can test the stability of the prestige categories to data errors and the short time frame of our data.  In each of 500 permutations, we randomly rewire 10% of the edges in the permanent hiring network, then calculate out-centralities on the rewired network.  Using a threshold of 10^-7 for high-prestige status, we count the fraction of rewired networks in which each program is high-prestige.  
 ## ~6 sec
-tictoc::tic()
+tic()
 set.seed(13579)
 permutations = 1:500 %>%
     ## Rewire 10% of edges
@@ -463,7 +466,7 @@ permutations = 1:500 %>%
     map(~ sum(. > 10^-7) / length(.)) %>%
     map(~ tibble(frac_high_prestige = .)) %>%
     bind_rows(.id = 'univ_id')
-tictoc::toc()
+toc()
 
 ## frac_high_prestige indicates the fraction of permutations in which the program was high-prestige
 ggplot(permutations, aes(frac_high_prestige)) + 
@@ -566,4 +569,4 @@ hiring_network_gc %>%
     theme_graph()
 
 ## Save university-level data with network statistics
-save(univ_df, file = '02_univ_net_stats.Rdata')
+write_rds(univ_df, str_c(data_folder, '02_univ_net_stats.rds'))
