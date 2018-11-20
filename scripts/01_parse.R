@@ -128,6 +128,12 @@ individual_df = individual_df_unfltd %>%
     )
 
 ## University-level data --------------------
+univ_location = read_csv(str_c(data_folder, 
+                               '00_university_table_2018-11-09.csv')) %>%
+    rename(univ_id = id, 
+           univ_name = name) %>%
+    mutate(univ_id = as.character(univ_id))
+
 ## Clusters
 clusters_df = read_csv(str_c(data_folder, 
                              '00_clusterDataIsomapknn50.csv')) %>% 
@@ -151,7 +157,11 @@ univ_df = tibble(univ_id = c(individual_df$placing_univ_id,
     ## AOS clusters
     left_join(select(clusters_df, ID, starts_with('cluster')),
               by = c('univ_id' = 'ID')) %>%
-    arrange(univ_name)
+    arrange(univ_name) %>%
+    ## Location
+    left_join(univ_location, by = 'univ_id', 
+              suffix = c('', '_y')) %>%
+    select(-matches('_y'))
 
 ## Placement totals, rates, and cumulative distributions
 ## These *do* include non-academic placements, which *do not* count as permanent
