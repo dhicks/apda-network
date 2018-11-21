@@ -10,22 +10,16 @@
 
 #' Findings
 #' --------------------
-#' - 25% of PhD programs produce about 50% of permanent placements
+#' - 37 PhD programs (22%) produce about 50% of permanent placements
 #' - Centrality scores reveal a clear division between two groups of programs, with "high" and "low" scores.  
-#' - High output is only modestly correlated with centrality scores.  Programs like Notre Dame, CUNY, and UVA produce lots of PhDs, but they aren't placed at high-centrality programs.  
+#' - The split between these programs is explained in part by the way PhD production and hiring are distributed across institutions.  However, bimodality is not due only to the degree distributions.  
+#' - High output is only modestly correlated with centrality.  Programs like Leuven, New School, and Boston College produce lots of PhDs, but they aren't placed into the high-centrality departments. 
 #' - There is no correlation between semantic clusters and topological communities. 
-#' - A closed group of 61 programs can be identified:  All recent hires by schools within this group received their PhD within this group.  This "high-prestige" group corresponds exactly to the high-centrality programs.  
-#' - Median permanent placement rate is 14 points higher at high-prestige programs (58% vs. 44% for low-prestige programs).  
+#' - A closed group of 56 programs can be identified:  All recent hires by schools within this group received their PhD within this group.  This "high-prestige" group corresponds exactly to the high-centrality programs.  
+#' - Median permanent placement rate is 22 points higher at high-prestige programs (64% vs. 42% for low-prestige programs).  
 #' - However, there is large variation in placement rate within both groups.  
-#' - High-prestige status is highly stable; actual high-prestige programs are almost always (>90%) high-prestige in the rewired networks. 
-#' - A number of actual low-prestige programs are often (>50%) high-prestige in the rewired networks.  
-#'     - Notre Dame (86%)
-#'     - New School (71%)
-#'     - Penn State (65%)
-#'     - Tulane (62%)
-#'     - Boston College (61%)
-#'     - UC Boulder (56%)
-#' - Within the actual categories, there is no correlation between counterfactual prestige status and either (a) out-centrality and (b) the number of permanent placements.  
+#' - Counterfactual high-prestige status is strongly correlated with actual centrality ranking.  
+#' - For low-prestige programs, counterfactual prestige seems to depend on the extent of the program's downstream hiring network. 
 
 library(tidyverse)
 library(igraph)
@@ -36,17 +30,32 @@ library(broom)
 library(tictoc)
 
 data_folder = '../data/'
+plots_folder = '../plots/'
 
 ## Load data
 load(str_c(data_folder, '01_parsed.Rdata'))
 
-#' **Finding: 25% of PhD programs produce about 50% of permanent placements**
+#' There are 167 PhD programs producing graduate students in the data
+univ_df %>%
+    filter(perm_placements > 0) %>%
+    nrow()
+
+#' **Finding: 37 PhD programs (37/167 = 22%) produce about 50% of permanent placements**
 ggplot(univ_df, aes(perm_placement_rank, frac_cum_perm_placements)) + 
     geom_step() +
     scale_x_continuous(labels = scales::percent_format(), 
                        name = 'PhD Programs') +
     scale_y_continuous(labels = scales::percent_format(), 
                        name = 'Permanent Placements')
+
+univ_df %>%
+    filter(frac_cum_perm_placements <= .5) %>%
+    arrange(perm_placement_rank) %>%
+    mutate(perm_placement_rank = row_number()) %>%
+    select(perm_placement_rank, univ_name, 
+           perm_placements, frac_cum_perm_placements) %>%
+    knitr::kable()
+
 
 
 #' Build network
@@ -192,40 +201,41 @@ map(1:100,
     ggplot(aes(x, y)) + 
     geom_line(aes(group = iteration), alpha = .5) + 
     stat_density(data = as_tibble(hiring_network), geom = 'line',
-                 aes(log10(out_centrality), ..density..), 
-                 color = 'red', size = 1) +
-    xlim(NA, 0)
+                 aes(log10(out_centrality), ..density..),
+                 color = 'red', size = 1)
 
 
 #' **Finding: High output is only modestly correlated w/ centrality.** 
-#' Programs like ND, CUNY, New School produce lots of PhDs, but they aren't placed into the high-centrality departments. 
+#' Programs like Leuven, New School, and Boston College produce lots of PhDs, but they aren't placed into the high-centrality departments. 
 ggplot(as_tibble(hiring_network), 
        aes(total_placements, log10(out_centrality))) +
-    geom_point(aes(text = univ_name))
+    geom_point(aes(text = univ_name)) +
+    geom_smooth()
 plotly::ggplotly()
 
 # univ_df %>%
 #     mutate(out_centrality_log = log10(out_centrality)) %>%
-#     filter(!is.na(out_centrality_log) & 
+#     filter(!is.na(out_centrality_log) &
 #                out_centrality > 0 &
 #                !is.na(total_placements)) %>%
 #     select(total_placements, out_centrality_log) %>%
 #     cor()
-as_tibble(hiring_network) %>%
+hiring_network %>%
     select(total_placements, out_centrality) %>%
+    as_tibble() %>%
     filter(complete.cases(.)) %>%
     mutate(out_centrality = log10(out_centrality)) %>%
     cor()
 
-ggplot(as_tibble(hiring_network), 
+ggplot(hiring_network, 
        aes(perm_placement_rank, log10(out_centrality))) +
     geom_point() +
     geom_smooth()
 
-ggplot(as_tibble(hiring_network), 
-       aes(perm_placement_rate, log10(out_centrality), 
-           text = univ_name)) + 
-    geom_point()
+ggplot(hiring_network, 
+       aes(log10(out_centrality), perm_placement_rate)) +
+    geom_point(aes(text = univ_name)) +
+    geom_smooth(method = 'lm')
 plotly::ggplotly()
 
 as_tibble(hiring_network) %>%
@@ -235,28 +245,28 @@ as_tibble(hiring_network) %>%
     mutate(out_centrality = log10(out_centrality)) %>%
     cor()
 
-## Movement w/in high-prestige group
-# individual_df %>% 
-#     filter(permanent) %>%
-#     left_join(select(univ_df, univ_id, out_centrality), 
-#               by = c('placing_univ_id' = 'univ_id')) %>%
-#     left_join(select(univ_df, univ_id, out_centrality),
-#               by = c('hiring_univ_id' = 'univ_id')) %>%
-#     filter(out_centrality.y > 10^-10) %>%
-#     select(person_id, 
-#            placing = out_centrality.x, 
-#            hiring = out_centrality.y) %>%
-#     gather(variable, value, -person_id) %>%
-#     mutate(variable = fct_rev(variable)) %>%
-#     ggplot(aes(variable, log10(value))) + 
-#     geom_point() +
-#     geom_line(aes(group = person_id))
-
-## Add central scores to univ_df
+## Add centrality scores to univ_df
 univ_df = hiring_network %>%
     as_tibble() %>%
     rename(univ_id = name) %>%
     left_join(univ_df, .)
+
+## Movement w/in high-prestige group
+individual_df %>%
+    filter(permanent) %>%
+    left_join(select(univ_df, univ_id, out_centrality),
+              by = c('placing_univ_id' = 'univ_id')) %>%
+    left_join(select(univ_df, univ_id, out_centrality),
+              by = c('hiring_univ_id' = 'univ_id')) %>%
+    filter(out_centrality.y > 10^-15) %>%
+    select(person_id,
+           placing = out_centrality.x,
+           hiring = out_centrality.y) %>%
+    gather(variable, value, -person_id) %>%
+    mutate(variable = fct_rev(variable)) %>%
+    ggplot(aes(variable, log10(value))) +
+    geom_point() +
+    geom_line(aes(group = person_id))
 
 ## Diagonal line indicates where hiring program has the same centrality as the placing program.  
 ## Most placements are below this line, indicating that the centrality measure captures the idea that people typically are hired by programs with lower status
@@ -267,21 +277,18 @@ individual_df %>%
               by = c('placing_univ_id' = 'univ_id')) %>%
     left_join(select(univ_df, univ_id, out_centrality),
               by = c('hiring_univ_id' = 'univ_id')) %>%
-    filter(out_centrality.y > 10^-10) %>%
+    filter(out_centrality.y > 10^-15) %>%
     select(person_id, 
            placing = out_centrality.x, 
            hiring = out_centrality.y) %>%
     ggplot(aes(log10(placing), log10(hiring))) + 
-    geom_point() + 
-    stat_function(fun = function (x) x)
+    geom_jitter() + 
+    stat_function(fun = identity)
 
 
 
 #' Community detection
 #' --------------------
-## steps = 26 has low values for both entropy of community sizes (high delta H) and total # communities
-## but somewhere along the way this started producing >300 communities? 
-## bc ~300 connected components
 ## Extract giant component
 hiring_network_gc = hiring_network %>%
     components %>% 
@@ -314,12 +321,14 @@ ggplot(comm_stats, aes(walk_len, n_comms)) +
 ggplot(comm_stats, aes(n_comms, delta_H)) +
     geom_text(aes(label = walk_len))
 
-#' Select the walk length that minimizes both delta_H and n_comms by looking at regression residuals
+#' Select the walk length that minimizes both delta_H (flatter community distribution) and n_comms (fewer communities) using regression residuals
 walk_length = lm(delta_H ~ n_comms, data = comm_stats) %>%
     augment(comm_stats) %>%
     arrange(.resid) %>%
     pull(walk_len) %>%
     first()
+
+walk_length
 
 communities = cluster_walktrap(hiring_network_gc, steps = walk_length)
 V(hiring_network_gc)$community = membership(communities)
@@ -345,7 +354,7 @@ univ_df %>%
            cluster_frac = cluster_n / community_tot, 
            H = sum(cluster_frac * log2(cluster_frac))) %>%
     ungroup() %>%
-    ggplot(aes(fct_reorder(community, community_tot, .desc = TRUE),
+    ggplot(aes(fct_reorder(community, community_tot, .desc = FALSE),
                cluster_n, fill = cluster_lvl3)) + 
     geom_col() + 
     coord_flip() +
@@ -375,14 +384,14 @@ prestigious = make_ego_graph(hiring_network, order = 12,
     as_tbl_graph()
 
 ## How large is the high-prestige community?  
-## 51 programs; 7% of all programs in the network; 
-## 33% of programs with at least 1 placement in the dataset
+## 56 programs; 7% of all programs in the network; 
+## 28% of programs with at least 1 placement in the dataset
 length(V(prestigious))
 length(V(prestigious)) / length(V(hiring_network))
-length(V(prestigious)) / sum(!is.na(univ_df$total_placements))
+length(V(prestigious)) / sum(univ_df$total_placements > 0, na.rm = TRUE)
 
 ## What fraction of hires are within high-prestige?  
-## 13% of all permanent hires; 6% of all hires
+## 13% of all permanent hires; 7% of all hires
 length(E(prestigious)) / length(E(hiring_network))
 length(E(prestigious)) / nrow(individual_df)
 
@@ -391,12 +400,17 @@ length(E(prestigious)) / nrow(individual_df)
 set.seed(24)
 ggraph(prestigious) + 
     geom_node_label(aes(label = univ_name, 
-                        size = log10(out_centrality))) + 
+                        size = log10(out_centrality), 
+                        fill = log10(out_centrality)),
+                    color = 'white') + 
     geom_edge_fan(arrow = arrow(length = unit(.01, 'npc')), 
                   alpha = .25,
                   spread = 5) +
-    scale_size_continuous(range = c(.5, 3)) +
+    scale_size_continuous(range = c(.5, 3), guide = FALSE) +
+    scale_fill_viridis() +
     theme_graph()
+ggsave(str_c(plots_folder, '02_prestigious_net.png'), 
+       width = 11, height = 11, dpi = 400)
 # dev.off()
 
 ## High-prestige = high centrality group
@@ -417,31 +431,37 @@ univ_df %>%
     ggplot(aes(cluster_lvl3, color = prestige)) + 
     geom_point(stat = 'count') +
     geom_line(aes(group = prestige), stat = 'count')
-## High-prestige are mostly confined to the 3 large communities
+## High-prestige are mostly in the largest community
 univ_df %>%
     filter(!is.na(community)) %>%
     ggplot(aes(as.integer(community), fill = prestige)) + 
     geom_bar()
 
 ## What fraction of high-prestige graduates end up in high-prestige programs? 
-## 148 / (148 + 425) = 26% of those w/ permanent placements
+## 24% of those w/ permanent placements
 individual_df %>%
     filter(permanent) %>%
     left_join(univ_df, by = c('placing_univ_id' = 'univ_id')) %>%
     left_join(univ_df, by = c('hiring_univ_id' = 'univ_id')) %>%
     select(placing = prestige.x, hiring = prestige.y) %>%
-    table()
+    count(placing, hiring) %>%
+    group_by(placing) %>%
+    mutate(share = n / sum(n))
 
-#' **Finding: Median permanent placement rate for high-prestige programs is 12 points higher than for low-prestige programs.** 
-#' However, variation is also wide within each group; 
-#' even among high-prestige programs, median permanent placement rate is only 58%. 
+#' **Finding: Median permanent placement rate for high-prestige programs is 22 points higher than for low-prestige programs.** 
+#' However, variation is also wide within each group;  
 #' This is also not yet controlling for graduation year, area, or demographics. 
 ggplot(univ_df, aes(prestige, perm_placement_rate, 
                     label = univ_name)) + 
-    geom_boxplot(color = 'red') +
-    geom_jitter() +
+    geom_violin(color = 'red', draw_quantiles = .5) +
+    geom_jitter(aes(size = total_placements)) +
     scale_y_continuous(labels = scales::percent_format())
 plotly::ggplotly()
+
+univ_df %>%
+    group_by(prestige) %>%
+    summarize_at(vars(perm_placement_rate), 
+                 funs(median, max, min), na.rm = TRUE)
 
 
 #' Stability of prestige status
@@ -477,39 +497,42 @@ univ_df = left_join(univ_df, permutations)
 
 #' **Finding:** Counterfactual high-prestige status is strongly correlated with centrality ranking. 
 #' 
-#' **Finding:** At the same time, a number of actual non-high-prestige programs are often (>50%) high-prestige in the rewired networks.  
-#' - Notre Dame (86%)
-#' - New School (71%)
-#' - Penn State (65%)
-#' - Tulane (62%)
-#' - Boston College (61%)
-#' - UC Boulder (56%)
-#' 
-#' **Finding:** Within the actual categories, there is no correlation between counterfactual high-prestige status and either (a) out-centrality and (b) the number of permanent placements.  
-ggplot(univ_df, aes(log10(out_centrality), frac_high_prestige, 
-                    text = univ_name)) + 
-    geom_point()
+ggplot(univ_df, aes(log10(out_centrality), frac_high_prestige)) + 
+    geom_point(aes(text = univ_name)) +
+    geom_smooth(method = 'lm')
 plotly::ggplotly()
 
-ggplot(univ_df, aes(perm_placements, frac_high_prestige)) + 
-    geom_point()
+ggplot(univ_df, aes(perm_placements, frac_high_prestige, color = prestige)) + 
+    geom_point(aes(text = univ_name)) +
+    geom_smooth(method = 'lm')
+plotly::ggplotly()
 
-#' Among low-status programs, a likely explanation is the size of the program's total downstream network.  Notre Dame's is fairly large, with many potential PhDs; if rewiring leads any of these PhDs to a high-status position, both their PhD institution and Notre Dame join the high-status group.  UC Boulder's downstream network is smaller, with fewer opportunities to place into a high-status position.  
-
-make_ego_graph(hiring_network, order = 10, 
-               nodes = c(Villanova = '221', Boston_College = '38'),
+#' **Finding:** For low-prestige programs, counterfactual prestige seems to depend on the extent of the program's downstream hiring network.  Compare Boston College (19 permanent placements; 40% high prestige) to Leuven (18 permanent placements; 20% high prestige). 
+set.seed(9876)
+bc_leuven = make_ego_graph(hiring_network, order = 10, 
+               nodes = c('529', '38'),
                mode = 'out') %>% 
-    disjoint_union() %>%
-    induced_subgraph(., 
-                     which(!is.na(V(.)$perm_placements))) %>%
-    ggraph() + 
-    geom_node_label(aes(label = univ_name, 
-                        size = perm_placements)) + 
-    geom_edge_fan(arrow = arrow(angle = 45, 
-                                length = unit(.1, 'inches'), 
-                                type = 'closed')) +
-    scale_label_size(range = c(0, 1.5), name = 'placements') + 
-    theme_graph()
+    map(as_tbl_graph) %>%
+    map(mutate,
+        perm_placements = ifelse(is.na(perm_placements), 0, perm_placements)) %>%
+    map(~ ggraph(.) + 
+            geom_node_label(aes(label = univ_name, 
+                                size = perm_placements, 
+                                fill = perm_placements), 
+                            color = 'white') + 
+            geom_edge_fan(arrow = arrow(angle = 45, 
+                                        length = unit(.1, 'inches'), 
+                                        type = 'closed'), 
+                          alpha = .6) +
+            scale_size_continuous(range = c(1, 5),
+                             # na.value = 1,
+                             name = 'placements',
+                             guide = FALSE) +
+            scale_fill_viridis(na.value = 'black') +
+            theme_graph())
+cowplot::plot_grid(plotlist = bc_leuven, ncol = 2)
+ggsave(str_c(plots_folder, '02_bc_leuven.png'), 
+       height = 6, width = 12, dpi = 600, scale = 2)
 
 #' Plotting
 #' --------------------
@@ -534,7 +557,7 @@ hiring_network %>%
                         alpha = log10(out_centrality),
                         # color = as.factor(community))
                         color = cluster_lvl3
-                    )) +
+    )) +
     scale_color_brewer(palette = 'Set1', na.value = 'grey40') +
     # scale_size_discrete(range = c(2, 6)) +
     scale_size_continuous(range = c(.1, 5)) +
@@ -558,15 +581,15 @@ hiring_network %>%
 
 
 #' Chord diagram
-hiring_network_gc %>%
-    # induced_subgraph(which(degree(., mode = 'out') > 0)) %>%
-    ggraph(layout = 'linear', sort.by = 'community_coarse', circular = TRUE) +
-    geom_edge_arc(arrow = arrow(length = unit(.01, 'npc')), alpha = .1) +
-    geom_node_point(aes(size = prestigious, 
-                        # color = as.factor(community))) +
-                        color = cluster_lvl3)) +
-    scale_color_brewer(palette = 'Set1', guide = FALSE) +
-    theme_graph()
+# hiring_network_gc %>%
+#     # induced_subgraph(which(degree(., mode = 'out') > 0)) %>%
+#     ggraph(layout = 'linear', sort.by = 'community_coarse', circular = TRUE) +
+#     geom_edge_arc(arrow = arrow(length = unit(.01, 'npc')), alpha = .1) +
+#     geom_node_point(aes(size = prestigious, 
+#                         # color = as.factor(community))) +
+#                         color = cluster_lvl3)) +
+#     scale_color_brewer(palette = 'Set1', guide = FALSE) +
+#     theme_graph()
 
-## Save university-level data with network statistics
+#' Save university-level data with network statistics
 write_rds(univ_df, str_c(data_folder, '02_univ_net_stats.rds'))
