@@ -23,6 +23,11 @@ individual_df_raw = read_csv(str_c(data_folder,
                              col_types = str_dup('c', 13),
                              skip = 1)
 
+## Missingness codes are 4 for ethnicity and 7 for race
+## Almost all individuals are missing ethnicity and race
+count(individual_df_raw, ethnicity)
+count(individual_df_raw, race)
+
 individual_df_unfltd = individual_df_raw %>%
     mutate(gender = fct_recode(gender, 
                                'm' = '1', 
@@ -127,12 +132,16 @@ individual_df = individual_df_unfltd %>%
         placement_year >= 2012
     )
 
+
 ## University-level data --------------------
 univ_location = read_csv(str_c(data_folder, 
                                '00_university_table_2018-11-09.csv')) %>%
     rename(univ_id = id, 
            univ_name = name) %>%
-    mutate(univ_id = as.character(univ_id))
+    mutate(univ_id = as.character(univ_id), 
+           country = case_when(country == 'England' ~ 'U.K.',
+                               country == 'U.K' ~ 'U.K.', 
+                               TRUE ~ country))
 
 ## Clusters
 clusters_df = read_csv(str_c(data_folder, 
@@ -141,7 +150,6 @@ clusters_df = read_csv(str_c(data_folder,
     rename_at(vars(contains('Lvl')), 
               funs(str_c('cluster_', tolower(.)))) %>%
     mutate_if(is.numeric, as.character)
-
 
 ## Build canonical names + attach clusters
 univ_df = tibble(univ_id = c(individual_df$placing_univ_id,
@@ -203,5 +211,6 @@ univ_df = univ_df %>%
     left_join(h_df) %>%
     left_join(gender_df)
 
+## Output ----
 save(individual_df_unfltd, individual_df, univ_df, 
      file = str_c(data_folder, '01_parsed.Rdata'))
