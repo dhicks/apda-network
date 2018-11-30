@@ -97,12 +97,21 @@ set.seed(42)
 nzmin = function(x, na.rm = TRUE) {
     min(x[x > 0], na.rm = na.rm)
 }
+damping = .3
 hiring_network = hiring_network %>%
     mutate(in_centrality = centrality_eigen(weights = NA, 
-                                            directed = TRUE)) %>%
+                                            directed = TRUE), 
+           in_pr = centrality_pagerank(weights = NA, 
+                                       directed = TRUE, 
+                                       damping = damping, 
+                                       personalized = NULL)) %>%
     morph(to_reverse) %>%
     mutate(out_centrality = centrality_eigen(weights = NA,
-                                             directed = TRUE)) %>%
+                                             directed = TRUE), 
+           out_pr = centrality_pagerank(weights = NA, 
+                                        directed = TRUE, 
+                                        damping = damping, 
+                                        personalized = NULL)) %>%
     unmorph() %>%
     ## Trim 0s to minimum non-zero values
     mutate(out_centrality = ifelse(out_centrality == 0,
@@ -135,6 +144,12 @@ hiring_network = hiring_network %>%
 
 #' Exploring centrality scores
 #' --------------------
+#' PageRank centrality is almost entirely determined by degree
+#' So we use eigenvector centrality instead
+ggplot(hiring_network, aes(degree, log10(out_pr))) +
+    geom_point(aes(text = univ_name)) +
+    geom_smooth(method = 'lm')
+
 #' There are two clear groups of centrality scores, with high scores (in the range of 10^-12 to 1) and low scores (10^-15 and smaller). 
 ##
 ## NB there seem to be (small?) differences in scores (at the low end?) across runs of the centrality algorithm
@@ -510,8 +525,8 @@ plotly::ggplotly()
 #' **Finding:** For low-prestige programs, counterfactual prestige seems to depend on the extent of the program's downstream hiring network.  Compare Boston College (19 permanent placements; 40% high prestige) to Leuven (18 permanent placements; 20% high prestige). 
 set.seed(9876)
 bc_leuven = make_ego_graph(hiring_network, order = 10, 
-               nodes = c('529', '38'),
-               mode = 'out') %>% 
+                           nodes = c('529', '38'),
+                           mode = 'out') %>% 
     map(as_tbl_graph) %>%
     map(mutate,
         perm_placements = ifelse(is.na(perm_placements), 0, perm_placements)) %>%
@@ -525,9 +540,9 @@ bc_leuven = make_ego_graph(hiring_network, order = 10,
                                         type = 'closed'), 
                           alpha = .6) +
             scale_size_continuous(range = c(1, 5),
-                             # na.value = 1,
-                             name = 'placements',
-                             guide = FALSE) +
+                                  # na.value = 1,
+                                  name = 'placements',
+                                  guide = FALSE) +
             scale_fill_viridis(na.value = 'black') +
             theme_graph())
 cowplot::plot_grid(plotlist = bc_leuven, ncol = 2)
