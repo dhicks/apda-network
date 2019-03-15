@@ -40,7 +40,11 @@ posterior_estimates = function(model) {
                                  level == 'gendero' ~ 'gender: other', 
                                  TRUE ~ level),
                level = str_remove(level, 'country'), 
-               level = str_replace(level, 'perc w', 'women (%)')) %>% 
+               level = str_replace(level, 'perc w', 'women (%)'), 
+               level = case_when(str_detect(group, 'cluster_lvl3') ~ paste('cluster', level), 
+                                 group == 'community' ~ paste('community', level), 
+                                 TRUE ~ level)
+               ) %>% 
         ## Arrange x-axis
         arrange(entity, group, estimate) %>% 
         mutate(group = fct_inorder(group), 

@@ -145,8 +145,8 @@ univ_location = read_csv(str_c(data_folder,
 
 ## Clusters
 clusters_df = read_csv(str_c(data_folder, 
-                             '00_clusterDataIsomapknn50.csv')) %>% 
-    rename(ID = X1) %>%
+                             '00_clusterOutput_2019-03-14.csv')) %>% 
+    # rename(ID = X1) %>%
     rename_at(vars(contains('Lvl')), 
               funs(str_c('cluster_', tolower(.)))) %>%
     mutate_if(is.numeric, as.character)
@@ -163,8 +163,8 @@ univ_df = tibble(univ_id = c(individual_df$placing_univ_id,
     summarize(univ_name = first(univ_name[which(n == max(n))])) %>% 
     ungroup() %>%
     ## AOS clusters
-    left_join(select(clusters_df, ID, starts_with('cluster')),
-              by = c('univ_id' = 'ID')) %>%
+    left_join(clusters_df,
+              by = c('univ_name' = 'University')) %>%
     arrange(univ_name) %>%
     ## Location
     left_join(univ_location, by = 'univ_id', 
@@ -193,6 +193,7 @@ placement_df = individual_df %>%
 
 ## Program-level AOS diversity
 h_df = individual_df %>%
+    mutate(aos_category = fct_explicit_na(aos_category)) %>% 
     count(univ_id = placing_univ_id, aos_category) %>%
     group_by(univ_id) %>%
     mutate(frac = n / sum(n)) %>%
@@ -200,10 +201,12 @@ h_df = individual_df %>%
 
 ## Program-level fraction women, other
 gender_df = individual_df %>%
+    mutate(gender = fct_explicit_na(gender)) %>% 
     count(univ_id = placing_univ_id, gender) %>%
     spread(key = gender, value = n, fill = 0) %>%
-    rename(m_count = m, w_count = w, gender_na_count = `<NA>`) %>%
-    mutate(frac_w = w_count / (m_count + w_count + gender_na_count))
+    rename(m_count = m, w_count = w, o_count = o, 
+           gender_na_count = `(Missing)`) %>%
+    mutate(frac_w = w_count / (m_count + w_count + o_count + gender_na_count))
 
 ## Combine program-level dataframes
 univ_df = univ_df %>%

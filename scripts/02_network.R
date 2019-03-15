@@ -4,10 +4,7 @@
 #'         self_contained: yes
 #'         toc: true
 #' ---
-
-# TODO: 
-# - rewrite text
-
+#' 
 #' Findings
 #' --------------------
 #' - 37 PhD programs (22%) produce about 50% of permanent placements
@@ -25,6 +22,7 @@ library(tidyverse)
 library(igraph)
 library(tidygraph)
 library(ggraph)
+library(smglr)
 library(broom)
 
 library(tictoc)
@@ -35,12 +33,12 @@ plots_folder = '../plots/'
 ## Load data
 load(str_c(data_folder, '01_parsed.Rdata'))
 
-#' There are 167 PhD programs producing graduate students in the data
+#' There are 203 PhD programs producing graduate students in the data
 univ_df %>%
-    filter(perm_placements > 0) %>%
+    filter(total_placements > 0) %>%
     nrow()
 
-#' **Finding: 37 PhD programs (37/167 = 22%) produce about 50% of permanent placements**
+#' **Finding: 37 PhD programs (37/203 = 18%) produce about 50% of permanent placements**
 ggplot(univ_df, aes(perm_placement_rank, frac_cum_perm_placements)) + 
     geom_step() +
     scale_x_continuous(labels = scales::percent_format(), 
@@ -56,6 +54,25 @@ univ_df %>%
            perm_placements, frac_cum_perm_placements) %>%
     knitr::kable()
 
+## Placements at PhD-producing programs
+grad_programs = univ_df %>% 
+    filter(total_placements > 0, country %in% c('U.S.')) %>% 
+    pull(univ_id)
+# gp2 = individual_df %>% 
+#     count(placing_univ_id) %>% 
+#     pull(placing_univ_id)
+
+individual_df %>% 
+    filter(permanent, hiring_univ_id %in% grad_programs) %>% 
+    filter(placing_univ_id %in% grad_programs) %>%
+    filter(position_type == 'Tenure-Track') %>%
+    count(placing_univ) %>%
+    arrange(desc(n)) %>% 
+    rename(phd_program_placements = n) %>% 
+    mutate(cum_phd_program_placements = cumsum(phd_program_placements), 
+           share_phd_program_placements = cum_phd_program_placements / sum(phd_program_placements)) %>% 
+    slice(1:20) %>% 
+    knitr::kable(digits = 2)
 
 
 #' Build network
@@ -150,7 +167,7 @@ ggplot(hiring_network, aes(degree, log10(out_pr))) +
     geom_point(aes(text = univ_name)) +
     geom_smooth(method = 'lm')
 
-#' There are two clear groups of centrality scores, with high scores (in the range of 10^-12 to 1) and low scores (10^-15 and smaller). 
+#' There are two clear groups of centrality scores, with high scores (in the range of ~10^-12 to 1) and low scores (10^-15 and smaller). 
 ##
 ## NB there seem to be (small?) differences in scores (at the low end?) across runs of the centrality algorithm
 ggplot(as_tibble(hiring_network), aes(out_centrality)) + 
@@ -410,10 +427,16 @@ length(V(prestigious)) / sum(univ_df$total_placements > 0, na.rm = TRUE)
 length(E(prestigious)) / length(E(hiring_network))
 length(E(prestigious)) / nrow(individual_df)
 
+layout_prestigious = layout_with_focus(prestigious, 
+                                       which(V(prestigious)$univ_name == 'University of Oxford')) %>% 
+    `colnames<-`(c('x', 'y')) %>% 
+    as_tibble()
+
 # png(file = '02_prestigious_net.png', 
 #     width = 11, height = 11, units = 'in', res = 400)
-set.seed(24)
-ggraph(prestigious) + 
+# set.seed(24)
+ggraph(prestigious, layout = 'manual', 
+       node.positions = layout_prestigious) + 
     geom_node_label(aes(label = univ_name, 
                         size = log10(out_centrality), 
                         fill = log10(out_centrality)),
@@ -440,7 +463,7 @@ ggplot(univ_df, aes(prestige, log10(out_centrality))) +
     geom_jitter()
 
 ## Prestige status and clusters
-## High-prestige basically don't appear in clusters 1 or 2
+## High-prestige are spread throughout, but #5 is mostly low-prestige
 univ_df %>%
     filter(!is.na(cluster_lvl3)) %>%
     ggplot(aes(cluster_lvl3, color = prestige)) + 
@@ -552,30 +575,40 @@ ggsave(str_c(plots_folder, '02_bc_leuven.png'),
 #' Plotting
 #' --------------------
 #' Coarser community structure
-large_comms = which(sizes(communities) > 20)
-V(hiring_network_gc)$community_coarse = ifelse(
-    V(hiring_network_gc)$community %in% large_comms, 
-    V(hiring_network_gc)$community, 
-    NA)
+# large_comms = which(sizes(communities) > 20)
+# V(hiring_network_gc)$community_coarse = ifelse(
+#     V(hiring_network_gc)$community %in% large_comms, 
+#     V(hiring_network_gc)$community, 
+#     NA)
 
-#' FR
+## ~13 sec
+tic()
+layout_net = layout_with_stress(hiring_network) %>% 
+    `colnames<-`(c('x', 'y')) %>% 
+    as_tibble()
+toc()
+
 hiring_network %>%
     # induced_subgraph(which(degree(., mode = 'out') > 0)) %>%
-    ggraph() +
+    ggraph(layout = 'manual', 
+           node.positions = layout_net) +
     # geom_node_label(aes(label = univ_name, 
     #                     size = log10(1 + out_centrality), 
     #                     color = as.factor(community))) +
+    geom_node_point(aes(#size = log10(out_centrality), 
+                        alpha = log10(out_centrality),
+                        # color = as.factor(community)
+                        color = cluster_lvl3
+                        # color = log10(out_centrality)
+    ), size = 2) +
     geom_edge_fan(arrow = arrow(length = unit(.01, 'npc')),
                   spread = 5, alpha = .1) +
     # geom_edge_density() +
-    geom_node_point(aes(size = log10(out_centrality), 
-                        alpha = log10(out_centrality),
-                        # color = as.factor(community))
-                        color = cluster_lvl3
-    )) +
     scale_color_brewer(palette = 'Set1', na.value = 'grey40') +
+    # scale_color_viridis() +
     # scale_size_discrete(range = c(2, 6)) +
-    scale_size_continuous(range = c(.1, 5)) +
+    scale_alpha_continuous(range = c(.25, 1)) +
+    # scale_size_continuous(range = c(1, 3)) +
     theme_graph()
 
 # hiring_network_gc %>%
@@ -608,3 +641,6 @@ hiring_network %>%
 
 #' Save university-level data with network statistics
 write_rds(univ_df, str_c(data_folder, '02_univ_net_stats.rds'))
+
+
+sessionInfo()
