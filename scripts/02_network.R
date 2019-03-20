@@ -180,7 +180,7 @@ ggplot(as_tibble(hiring_network), aes(in_centrality)) +
 
 ggplot(as_tibble(hiring_network), 
        aes(out_centrality, in_centrality, 
-           color = cluster_lvl3, 
+           color = cluster_lvl4, 
            text = univ_name)) +
     geom_jitter() + 
     scale_x_log10() + scale_y_log10()
@@ -370,16 +370,24 @@ univ_df = univ_df %>%
             select(univ_id = name, community) %>%
             mutate(community = as.character(community))})
 
+cluster_vars = univ_df %>% 
+    select(matches('cluster')) %>% 
+    names()
+
+univ_df %>% 
+    filter(!is.na(community), !is.na('cluster_lvl4'))
+
+
 #' **Finding: There is no correlation between semantic clusters and topological communities.**
 univ_df %>%
-    filter(!is.na(community), !is.na(cluster_lvl3)) %>%
-    select(community, cluster_lvl3) %>%
+    filter(!is.na(community), !is.na(cluster_lvl4)) %>%
+    select(community, cluster_lvl4) %>%
     table() %>%
     chisq.test(simulate.p.value = TRUE)
 
 univ_df %>%
-    filter(!is.na(community), !is.na(cluster_lvl3)) %>%
-    count(community, cluster_lvl3) %>%
+    filter(!is.na(community), !is.na(cluster_lvl4)) %>%
+    count(community, cluster_lvl4) %>%
     rename(cluster_n = n) %>%
     group_by(community) %>%
     mutate(community_tot = sum(cluster_n), 
@@ -387,7 +395,7 @@ univ_df %>%
            H = sum(cluster_frac * log2(cluster_frac))) %>%
     ungroup() %>%
     ggplot(aes(fct_reorder(community, community_tot, .desc = FALSE),
-               cluster_n, fill = cluster_lvl3)) + 
+               cluster_n, fill = cluster_lvl4)) + 
     geom_col() + 
     coord_flip() +
     xlab('Topological communities') +
@@ -465,8 +473,8 @@ ggplot(univ_df, aes(prestige, log10(out_centrality))) +
 ## Prestige status and clusters
 ## High-prestige are spread throughout, but #5 is mostly low-prestige
 univ_df %>%
-    filter(!is.na(cluster_lvl3)) %>%
-    ggplot(aes(cluster_lvl3, color = prestige)) + 
+    filter(!is.na(cluster_lvl4)) %>%
+    ggplot(aes(cluster_lvl4, color = prestige)) + 
     geom_point(stat = 'count') +
     geom_line(aes(group = prestige), stat = 'count')
 ## High-prestige are mostly in the largest community
@@ -598,7 +606,7 @@ hiring_network %>%
     geom_node_point(aes(#size = log10(out_centrality), 
                         alpha = log10(out_centrality),
                         # color = as.factor(community)
-                        color = cluster_lvl3
+                        color = cluster_lvl4
                         # color = log10(out_centrality)
     ), size = 2) +
     geom_edge_fan(arrow = arrow(length = unit(.01, 'npc')),
@@ -617,7 +625,7 @@ hiring_network %>%
 #     geom_node_label(aes(size = prestigious, 
 #                         label = univ_name,
 #                         # color = as.factor(community))) +
-#                         fill = cluster_lvl3), color = 'black') +
+#                         fill = cluster_lvl4), color = 'black') +
 #     geom_edge_fan(aes(linetype = aos_category, color = aos_category), 
 #                   width = 1,
 #                   arrow = arrow(length = unit(.01, 'npc')), 
@@ -635,7 +643,7 @@ hiring_network %>%
 #     geom_edge_arc(arrow = arrow(length = unit(.01, 'npc')), alpha = .1) +
 #     geom_node_point(aes(size = prestigious, 
 #                         # color = as.factor(community))) +
-#                         color = cluster_lvl3)) +
+#                         color = cluster_lvl4)) +
 #     scale_color_brewer(palette = 'Set1', guide = FALSE) +
 #     theme_graph()
 
