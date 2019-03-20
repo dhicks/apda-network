@@ -1,7 +1,9 @@
 ## Extract effects estimates, w/ nice orderings on variables for plotting
-posterior_estimates = function(model) {
-    fixed = tidy(model, parameters = 'non-varying', intervals = TRUE)
-    varying = tidy(model, parameters = 'varying', intervals = TRUE)
+posterior_estimates = function(model, prob = .9) {
+    fixed = tidy(model, parameters = 'non-varying', intervals = TRUE, 
+                 prob = prob)
+    varying = tidy(model, parameters = 'varying', intervals = TRUE, 
+                   prob = prob)
     
     combined = suppressWarnings(bind_rows(fixed, varying))
     
@@ -15,6 +17,7 @@ posterior_estimates = function(model) {
                                   term == 'total_placements' ~ 'program',
                                   group == 'community' ~ 'program',
                                   str_detect(group, 'cluster') ~ 'program',
+                                  term == 'average_distance' ~ 'program',
                                   group == 'graduation_year' ~ 'individual',
                                   group == 'placement_year' ~ 'individual',
                                   group == 'aos_category' ~ 'individual', 
@@ -29,6 +32,7 @@ posterior_estimates = function(model) {
                                  str_detect(term, 'country') ~ 'country', 
                                  term == 'perc_w' ~ 'continuous', 
                                  term == 'total_placements' ~ 'continuous', 
+                                 term == 'average_distance' ~ 'continuous',
                                  term == 'aos_diversity' ~ 'continuous',
                                  term == 'log10(in_centrality)' ~ 'continuous',
                                  TRUE ~ NA_character_)) %>% 
@@ -41,7 +45,7 @@ posterior_estimates = function(model) {
                                  TRUE ~ level),
                level = str_remove(level, 'country'), 
                level = str_replace(level, 'perc w', 'women (%)'), 
-               level = case_when(str_detect(group, 'cluster_lvl3') ~ paste('cluster', level), 
+               level = case_when(str_detect(group, 'cluster') ~ paste('cluster', level), 
                                  group == 'community' ~ paste('community', level), 
                                  TRUE ~ level)
                ) %>% 

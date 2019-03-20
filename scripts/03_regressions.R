@@ -27,8 +27,17 @@ source('../R/posterior_estimates.R')
 #+ load_data -----
 data_folder = '../data/'
 
+# cluster_distances = read_csv(str_c(data_folder, 
+#                                    '00_k9distances_2019-03-15.csv')) %>% 
+#     count(cluster_lvl4 = cluster, average_distance = avgDist) %>% 
+#     mutate(cluster_lvl4 = as.character(cluster_lvl4))
+# 
+# ggplot(cluster_distances, aes(cluster_lvl4, scale(average_distance))) +
+#     geom_label(aes(label = n, fill = n, size = n), color = 'white')
+
 load(str_c(data_folder, '01_parsed.Rdata'))
-univ_df = read_rds(str_c(data_folder, '02_univ_net_stats.rds'))
+univ_df = read_rds(str_c(data_folder, '02_univ_net_stats.rds')) #%>% 
+    # left_join(cluster_distances)
 
 individual_df = individual_df %>%
     left_join(univ_df, by = c('placing_univ_id' = 'univ_id')) %>%
@@ -38,7 +47,7 @@ individual_df = individual_df %>%
     # filter(complete.cases(.))
     filter_at(vars('permanent', 'aos_category', 
                    'graduation_year', 'prestige', 
-                   'community', 'cluster_lvl3',
+                   'community', 'cluster_lvl4',
                    'gender', 'frac_w', 
                    'frac_high_prestige', 'total_placements'), 
               all_vars(negate(is.na)(.))) %>%
@@ -53,7 +62,8 @@ individual_df = individual_df %>%
 individual_df %>% 
     select(permanent, aos_category, aos_diversity, perc_high_prestige,
            graduation_year, placement_year, prestige, 
-           in_centrality, out_centrality, community, cluster_lvl3, 
+           in_centrality, out_centrality, community, 
+           cluster_lvl4, #average_distance,
            gender, country, perc_w, 
            total_placements) %>% 
     mutate_if(negate(is.numeric), function(x) as.integer(as.factor(x))) %>% 
@@ -78,6 +88,7 @@ ggplot(individual_df, aes(frac_w, 1*permanent)) +
     geom_point() +
     geom_smooth(method = 'loess')
 
+
 ## Descriptive statistics ----
 individual_df %>%
     select(permanent, aos_category, 
@@ -97,11 +108,12 @@ individual_df %>%
     summarize_at(vars(value), funs(min, max, mean, median, sd), 
                  na.rm = TRUE)
 
+
 ## Model -----
 #+ model, cache = TRUE
 model_file = str_c(data_folder, '03_model.Rds')
 if (!file.exists(model_file)) {
-    ## ~400 seconds
+    ## ~700 seconds
     tic()
     model = individual_df %>% 
         mutate(prestige = fct_relevel(prestige, 'low-prestige'), 
@@ -114,7 +126,8 @@ if (!file.exists(model_file)) {
                        1 +
                        aos_diversity +
                        (1|community) +
-                       (1|cluster_lvl3) +
+                       (1|cluster_lvl4) +
+                       # average_distance +
                        log10(in_centrality) +
                        total_placements +
                        perc_w +
@@ -123,7 +136,7 @@ if (!file.exists(model_file)) {
                    family = 'binomial',
                    ## Priors
                    ## Constant and coefficients
-                   prior_intercept = normal(0, 1), 
+                   prior_intercept = normal(0, .5), ## constant term + random intercepts
                    prior = normal(0, .5),
                    ## error sd
                    prior_aux = exponential(rate = 1, 
@@ -134,7 +147,7 @@ if (!file.exists(model_file)) {
                                              shape = 1, scale = 1),
                    seed = 1159518215,
                    adapt_delta = .99,
-                   chains = 2, iter = 4000)
+                   chains = 4, iter = 4000)
     toc()
     write_rds(model, model_file)
 } else {
@@ -152,21 +165,20 @@ model %>%
     # knitr::kable()
     ggplot(aes(n_eff, Rhat, label = parameter)) +
     geom_point() +
-    geom_vline(xintercept = 2000) +
-    geom_hline(yintercept = 1.10)
+    geom_vline(xintercept = 4000) +
+    geom_hline(yintercept = 1.01)
 if (require(plotly)) {
     plotly::ggplotly()    
 }
 
-## Variables w/ fewer than 2000 effective draws
-## Mostly communities, sigmas, log-posterior
-## But nb **graduation year and value theory**
+## Variables w/ fewer than 3000 effective draws
+## covariance on random intercepts; log posterior
 model %>% 
     summary() %>% 
     as.data.frame() %>% 
     rownames_to_column('parameter') %>% 
     as_tibble() %>% 
-    filter(n_eff < 2000) %>% 
+    filter(n_eff < 3000) %>% 
     select(parameter, n_eff)
 
 ## Check predictions
@@ -176,17 +188,6 @@ pp_check(model, nreps = 200, plotfun = 'ppc_bars')
 pp_check(model, nreps = 200, plotfun = 'ppc_rootogram')
 pp_check(model, nreps = 200, plotfun = 'ppc_rootogram', style = 'hanging')
 
-# pred = predictions(model)
-
-# ggplot(pred, aes(.median, .residual)) +
-#     geom_point(aes(color = permanent)) +
-#     geom_smooth()
-# ggplot(pred, aes(.median, .residual, color = permanent)) +
-#     geom_linerange(aes(ymin = .residual - .lower, 
-#                        ymax = .residual - .upper))
-# 
-# ggplot(pred, aes(permanent, .median)) +
-#     geom_violin(draw_quantiles = c(.05, .5, .95))
 
 #+ Posterior estimates for coefficients ----
 estimates = posterior_estimates(model)
@@ -194,24 +195,22 @@ estimates = posterior_estimates(model)
 estimates %>% 
     filter(entity != 'intercept', 
            group != 'placement_year') %>% 
+    mutate_if(is.numeric, ~ . - 1) %>% 
     ggplot(aes(x = level, y = estimate, 
            ymin = lower, ymax = upper, 
            color = group)) +
-    geom_hline(yintercept = 1, linetype = 'dashed') +
+    geom_hline(yintercept = 0, linetype = 'dashed') +
     geom_pointrange() + 
     scale_color_viridis_d(name = 'covariate\ngroup') +
-    xlab('') + ylab('') +
+    xlab('') + #ylab('') +
+    scale_y_continuous(labels = scales::percent_format(), 
+                       name = '') +
     coord_flip() +
     facet_wrap(~ entity, scales = 'free')
 
-ggplot(estimates, 
-       aes(x = level, y = estimate, 
-           ymin = lower, ymax = upper, 
-           color = entity)) +
-    geom_hline(yintercept = 1, linetype = 'dashed') +
-    geom_pointrange() +
-    coord_flip() +
-    facet_wrap(~ group, scales = 'free_y')
+ggsave('../plots/03_estimates.png', 
+       width = 10, height = 5, 
+       scale = 1.5)
 
 
 sessionInfo()
