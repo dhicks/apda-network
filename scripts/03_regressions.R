@@ -26,13 +26,14 @@ source('../R/posterior_estimates.R')
 
 #+ load_data -----
 data_folder = '../data/'
+output_folder = '../plots/'
 
 # cluster_distances = read_csv(str_c(data_folder, 
 #                                    '00_k9distances_2019-03-15.csv')) %>% 
-#     count(cluster_lvl4 = cluster, average_distance = avgDist) %>% 
-#     mutate(cluster_lvl4 = as.character(cluster_lvl4))
+#     count(cluster = cluster, average_distance = avgDist) %>% 
+#     mutate(cluster = as.character(cluster))
 # 
-# ggplot(cluster_distances, aes(cluster_lvl4, scale(average_distance))) +
+# ggplot(cluster_distances, aes(cluster, scale(average_distance))) +
 #     geom_label(aes(label = n, fill = n, size = n), color = 'white')
 
 load(str_c(data_folder, '01_parsed.Rdata'))
@@ -51,19 +52,20 @@ individual_df = individual_df %>%
                    'gender', 'frac_w', 
                    'frac_high_prestige', 'total_placements'), 
               all_vars(negate(is.na)(.))) %>%
+    rename(cluster = cluster_lvl4) %>% 
     mutate(perc_w = 100*frac_w, 
            perc_high_prestige = 100*frac_high_prestige)
 
 ## Variables to consider: aos_category; graduation_year; placement_year; prestige; out_centrality; cluster; community; placing_univ_id; gender; country; perc_w; total_placements
 
-## Giant pairs plot/correlogram
+## Giant pairs plot/correlogram ----
 ## perc_high_prestige, out_centrality, and prestige are all tightly correlated
 ## All other pairs have low to moderate correlation
 individual_df %>% 
     select(permanent, aos_category, aos_diversity, perc_high_prestige,
            graduation_year, placement_year, prestige, 
            in_centrality, out_centrality, community, 
-           cluster_lvl4, #average_distance,
+           cluster, #average_distance,
            gender, country, perc_w, 
            total_placements) %>% 
     mutate_if(negate(is.numeric), function(x) as.integer(as.factor(x))) %>% 
@@ -90,23 +92,73 @@ ggplot(individual_df, aes(frac_w, 1*permanent)) +
 
 
 ## Descriptive statistics ----
+## Individual-level variables (all discrete)
 individual_df %>%
     select(permanent, aos_category, 
-           graduation_year, gender) %>%
+           graduation_year, placement_year, 
+           gender) %>%
     gather(key = variable, value = value) %>%
-    count(variable, value)
+    count(variable, value) %>% 
+    mutate(variable = str_replace_all(variable, '_', ' ')) %>% 
+    ggplot(aes(fct_rev(value), n, group = variable)) +
+    geom_col(aes(fill = variable), show.legend = FALSE) +
+    scale_fill_brewer(palette = 'Set1') +
+    xlab('') +
+    coord_flip() +
+    facet_wrap(vars(variable), scales = 'free')
+ggsave(str_c(output_folder, '03_descriptive_1.png'), 
+       height = 2*2, width = 2*3, scale = 1.5)
 
+## Program-level categorical
 individual_df %>%
-    select(prestige, country) %>%
+    select(prestige, country, 
+           community, cluster) %>%
     gather(key = variable, value = value) %>%
-    count(variable, value)
+    count(variable, value) %>% 
+    ggplot(aes(fct_rev(value), n, group = variable)) +
+    geom_col(aes(fill = variable), show.legend = FALSE) +
+    xlab('') +
+    coord_flip() +
+    facet_wrap(vars(variable), scales = 'free')
+ggsave(str_c(output_folder, '03_descriptive_2.png'), 
+       height = 2*2, width = 2*2, scale = 1.5)
 
-individual_df %>%
-    select(frac_w, total_placements, perm_placement_rate) %>%
-    gather(key = variable, value = value) %>%
-    group_by(variable) %>%
-    summarize_at(vars(value), funs(min, max, mean, median, sd), 
-                 na.rm = TRUE)
+## Program-level continuous variables
+# individual_df %>%
+#     select(frac_w, total_placements, perm_placement_rate) %>%
+#     gather(key = variable, value = value) %>%
+#     group_by(variable) %>%
+#     summarize_at(vars(value), 
+#                  funs(min, max, mean, median, sd), 
+#                  na.rm = TRUE)
+
+program_cont = individual_df %>% 
+    mutate(in_centrality = log10(in_centrality)) %>% 
+    select(`women share` = frac_w, 
+           `total placements` = total_placements, 
+           `permanent placement rate` = perm_placement_rate, 
+           `AOS diversity (bits)` = aos_diversity,
+           `hiring centrality (log10)` = in_centrality) %>% 
+    gather(key = variable, value = value)
+
+ggplot(program_cont, aes(value)) +
+    geom_density() +
+    geom_rug() +
+    geom_vline(data = {program_cont %>% 
+            group_by(variable) %>% 
+            summarize(mean = mean(value))}, 
+            aes(xintercept = mean, 
+                color = 'mean')) +
+    geom_vline(data = {program_cont %>% 
+            group_by(variable) %>% 
+            summarize(median = median(value))}, 
+            aes(xintercept = median, 
+                color = 'median')) +
+    scale_color_brewer(palette = 'Set1', 
+                       name = 'summary\nstatistic') +
+    facet_wrap(~ variable, scales = 'free')
+ggsave(str_c(output_folder, '03_descriptive_3.png'), 
+       height = 2*2, width = 2*3.5, scale = 1.5)
 
 
 ## Model -----
@@ -126,7 +178,7 @@ if (!file.exists(model_file)) {
                        1 +
                        aos_diversity +
                        (1|community) +
-                       (1|cluster_lvl4) +
+                       (1|cluster) +
                        # average_distance +
                        log10(in_centrality) +
                        total_placements +
@@ -186,15 +238,18 @@ pp_check(model, nreps = 200)
 pp_check(model, nreps = 200, plotfun = 'ppc_bars')
 ## <https://arxiv.org/pdf/1605.01311.pdf>
 pp_check(model, nreps = 200, plotfun = 'ppc_rootogram')
-pp_check(model, nreps = 200, plotfun = 'ppc_rootogram', style = 'hanging')
+pp_check(model, nreps = 200, plotfun = 'ppc_rootogram', 
+         style = 'hanging')
 
 
 #+ Posterior estimates for coefficients ----
-estimates = posterior_estimates(model)
+## 90% centered posterior intervals
+estimates = posterior_estimates(model, prob = .9)
 
 estimates %>% 
     filter(entity != 'intercept', 
            group != 'placement_year') %>% 
+    ## posterior_estimates() already exponentiates estimates
     mutate_if(is.numeric, ~ . - 1) %>% 
     ggplot(aes(x = level, y = estimate, 
            ymin = lower, ymax = upper, 
@@ -206,10 +261,11 @@ estimates %>%
     scale_y_continuous(labels = scales::percent_format(), 
                        name = '') +
     coord_flip() +
-    facet_wrap(~ entity, scales = 'free')
+    facet_wrap(~ entity, scales = 'free') +
+    theme(legend.position = 'bottom')
 
-ggsave('../plots/03_estimates.png', 
-       width = 10, height = 5, 
+ggsave(str_c(output_folder, '03_estimates.png'), 
+       width = 6, height = 6, 
        scale = 1.5)
 
 
