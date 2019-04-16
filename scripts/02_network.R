@@ -453,10 +453,13 @@ ggraph(prestigious, layout = 'manual',
                   alpha = .25,
                   spread = 5) +
     scale_size_continuous(range = c(.5, 3), guide = FALSE) +
-    scale_fill_viridis() +
-    theme_graph()
+    scale_fill_viridis(name = 'out centrality (log10)') +
+    coord_cartesian(xlim = c(-3.5, 5.5), clip = 'on') +
+    theme_graph() +
+    theme(legend.position = 'bottom', 
+          plot.margin = margin(0, unit = 'cm'))
 ggsave(str_c(plots_folder, '02_prestigious_net.png'), 
-       width = 11, height = 11, dpi = 400)
+       width = 6, height = 4, dpi = 600, scale = 2)
 # dev.off()
 
 ## High-prestige = high centrality group
@@ -554,31 +557,37 @@ ggplot(univ_df, aes(perm_placements, frac_high_prestige, color = prestige)) +
 plotly::ggplotly()
 
 #' **Finding:** For low-prestige programs, counterfactual prestige seems to depend on the extent of the program's downstream hiring network.  Compare Boston College (19 permanent placements; 40% high prestige) to Leuven (18 permanent placements; 20% high prestige). 
-set.seed(9876)
-bc_leuven = make_ego_graph(hiring_network, order = 10, 
+bc_leuven_net = make_ego_graph(hiring_network, order = 10, 
                            nodes = c('529', '38'),
                            mode = 'out') %>% 
     map(as_tbl_graph) %>%
-    map(mutate,
-        perm_placements = ifelse(is.na(perm_placements), 0, perm_placements)) %>%
-    map(~ ggraph(.) + 
-            geom_node_label(aes(label = univ_name, 
-                                size = perm_placements, 
-                                fill = perm_placements), 
-                            color = 'white') + 
-            geom_edge_fan(arrow = arrow(angle = 45, 
-                                        length = unit(.1, 'inches'), 
-                                        type = 'closed'), 
-                          alpha = .6) +
-            scale_size_continuous(range = c(1, 5),
-                                  # na.value = 1,
-                                  name = 'placements',
-                                  guide = FALSE) +
-            scale_fill_viridis(na.value = 'black') +
-            theme_graph())
-cowplot::plot_grid(plotlist = bc_leuven, ncol = 2)
+    reduce(bind_graphs) %>% 
+    mutate(perm_placements = ifelse(is.na(perm_placements), 0, perm_placements))
+
+bc_leuven_layout = bc_leuven_net %>% 
+    layout_with_stress() %>% 
+    `colnames<-`(c('x', 'y')) %>% 
+    as_tibble()
+
+ggraph(bc_leuven_net, layout = 'manual', 
+       node.positions = bc_leuven_layout) + 
+    geom_node_label(aes(label = univ_name, 
+                        size = perm_placements, 
+                        fill = perm_placements), 
+                    color = 'white') + 
+    geom_edge_fan(arrow = arrow(angle = 45, 
+                                length = unit(.1, 'inches'), 
+                                type = 'closed'), 
+                  alpha = .3) +
+    scale_size_continuous(range = c(1, 5),
+                          # na.value = 1,
+                          name = 'placements',
+                          guide = FALSE) +
+    scale_fill_viridis(na.value = 'black', name = 'permanent\nplacements') +
+    theme_graph()
+
 ggsave(str_c(plots_folder, '02_bc_leuven.png'), 
-       height = 6, width = 12, dpi = 600, scale = 2)
+       height = 6, width = 6, dpi = 600, scale = 1.25)
 
 #' Plotting
 #' --------------------
@@ -589,35 +598,37 @@ ggsave(str_c(plots_folder, '02_bc_leuven.png'),
 #     V(hiring_network_gc)$community, 
 #     NA)
 
+## Big giant hairy ball
 ## ~13 sec
-tic()
-layout_net = layout_with_stress(hiring_network) %>% 
-    `colnames<-`(c('x', 'y')) %>% 
-    as_tibble()
-toc()
-
-hiring_network %>%
-    # induced_subgraph(which(degree(., mode = 'out') > 0)) %>%
-    ggraph(layout = 'manual', 
-           node.positions = layout_net) +
-    # geom_node_label(aes(label = univ_name, 
-    #                     size = log10(1 + out_centrality), 
-    #                     color = as.factor(community))) +
-    geom_node_point(aes(#size = log10(out_centrality), 
-                        alpha = log10(out_centrality),
-                        # color = as.factor(community)
-                        color = cluster_lvl4
-                        # color = log10(out_centrality)
-    ), size = 2) +
-    geom_edge_fan(arrow = arrow(length = unit(.01, 'npc')),
-                  spread = 5, alpha = .1) +
-    # geom_edge_density() +
-    scale_color_brewer(palette = 'Set1', na.value = 'grey40') +
-    # scale_color_viridis() +
-    # scale_size_discrete(range = c(2, 6)) +
-    scale_alpha_continuous(range = c(.25, 1)) +
-    # scale_size_continuous(range = c(1, 3)) +
-    theme_graph()
+# tic()
+# layout_net = hiring_network %>% 
+#     layout_with_stress() %>% 
+#     `colnames<-`(c('x', 'y')) %>% 
+#     as_tibble()
+# toc()
+# 
+# hiring_network %>%
+#     # induced_subgraph(which(degree(., mode = 'out') > 0)) %>%
+#     ggraph(layout = 'manual', 
+#            node.positions = layout_net) +
+#     # geom_node_label(aes(label = univ_name, 
+#     #                     size = log10(1 + out_centrality), 
+#     #                     color = as.factor(community))) +
+#     geom_node_point(aes(#size = log10(out_centrality), 
+#                         alpha = log10(out_centrality),
+#                         # color = as.factor(community)
+#                         color = cluster_lvl4
+#                         # color = log10(out_centrality)
+#     ), size = 2) +
+#     geom_edge_fan(arrow = arrow(length = unit(.01, 'npc')),
+#                   spread = 5, alpha = .1) +
+#     # geom_edge_density() +
+#     scale_color_brewer(palette = 'Set1', na.value = 'grey40') +
+#     # scale_color_viridis() +
+#     # scale_size_discrete(range = c(2, 6)) +
+#     scale_alpha_continuous(range = c(.25, 1)) +
+#     # scale_size_continuous(range = c(1, 3)) +
+#     theme_graph()
 
 # hiring_network_gc %>%
 #     induced_subgraph(!is.na(V(.)$cluster_lvl1)) %>%
@@ -646,6 +657,24 @@ hiring_network %>%
 #                         color = cluster_lvl4)) +
 #     scale_color_brewer(palette = 'Set1', guide = FALSE) +
 #     theme_graph()
+
+## Separate networks for each cluster
+# cluster_ids = hiring_network %>% 
+#     as_tibble() %>% 
+#     split(., .$cluster_lvl4) %>% 
+#     map(pull, name)
+# 
+# cluster_ids %>% 
+#     map(~induced_subgraph(hiring_network, .))
+
+hiring_network %>% 
+    # filter(!is.na(cluster_lvl4)) %>% 
+    ggraph(layout = 'manual', 
+       node.positions = layout_net) +
+    geom_node_point(aes(color = cluster_lvl4), show.legend = FALSE) +
+    geom_edge_fan() +
+    facet_nodes(vars(cluster_lvl4)) +
+    theme_graph()
 
 #' Save university-level data with network statistics
 write_rds(univ_df, str_c(data_folder, '02_univ_net_stats.rds'))
