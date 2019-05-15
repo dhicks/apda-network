@@ -48,11 +48,11 @@ individual_df = individual_df %>%
     # filter(complete.cases(.))
     filter_at(vars('permanent', 'aos_category', 
                    'graduation_year', 'prestige', 
-                   'community', 'cluster_lvl4',
+                   'community', 'cluster_label',
                    'gender', 'frac_w', 
                    'frac_high_prestige', 'total_placements'), 
               all_vars(negate(is.na)(.))) %>%
-    rename(cluster = cluster_lvl4) %>% 
+    rename(cluster = cluster_label) %>% 
     mutate(perc_w = 100*frac_w, 
            perc_high_prestige = 100*frac_high_prestige)
 
@@ -162,7 +162,7 @@ ggsave(str_c(output_folder, '03_descriptive_3.png'),
 
 
 ## Model -----
-#+ model, cache = TRUE
+#+ model, cache = FALSE
 model_file = str_c(data_folder, '03_model.Rds')
 if (!file.exists(model_file)) {
     ## ~700 seconds
@@ -267,6 +267,53 @@ estimates %>%
 ggsave(str_c(output_folder, '03_estimates.png'), 
        width = 6, height = 6, 
        scale = 1.5)
+
+
+## Marginal effects for gender and prestige ----
+marginals = function (dataf, model, variable, 
+                      ref_value = 0L, 
+                      alt_value = 1L) {
+    variable = enquo(variable)
+    
+    all_0 = mutate(dataf, !!variable := ref_value)
+    all_1 = mutate(dataf, !!variable := alt_value)
+    
+    pred_0 = posterior_linpred(model, newdata = all_0, 
+                               transform = TRUE)
+    pred_1 = posterior_linpred(model, newdata = all_1, 
+                               transform = TRUE)
+    
+    marginal_effect = pred_1 - pred_0
+    return(marginal_effect)
+}
+
+marginals_gender = individual_df %>% 
+    ## posterior_linpred raises an error when there are any NAs, even in columns that aren't used by the model
+    select(-city, -state) %>% 
+    marginals(model, gender, 
+              ref_value = 'm', 
+              alt_value = 'w')
+
+apply(marginals_gender, 1, mean) %>% 
+    quantile(probs = c(.05, .5, .95))
+#         5%        50%        95% 
+# 0.06819497 0.10771227 0.14670850 
+
+
+marginals_prestige = individual_df %>% 
+    select(-city, -state) %>% 
+    marginals(model, prestige, 'low-prestige', 'high-prestige')
+
+apply(marginals_prestige, 1, mean) %>% 
+    quantile(probs = c(.05, .5, .95))
+#          5%        50%        95% 
+# 0.07489617 0.11984656 0.16493118
+
+marginals_canada = individual_df %>% 
+    select(-city, -state) %>% 
+    marginals(model, country, 'U.S.', 'Canada') %>% 
+    apply(1, mean) %>% 
+    quantile(probs = c(.05, .5, .95))
 
 
 sessionInfo()
