@@ -24,13 +24,14 @@ library(tidygraph)
 library(ggraph)
 library(smglr)
 library(broom)
+library(ggforce)
 
 library(tictoc)
 
 data_folder = '../data/'
 plots_folder = '../plots/'
 
-## Load data
+## Load data ----
 load(str_c(data_folder, '01_parsed.Rdata'))
 
 #' There are 203 PhD programs producing graduate students in the data
@@ -77,6 +78,7 @@ individual_df %>%
 
 #' Build network
 #' --------------------
+## build network ----
 ## NB Only permanent placements
 hiring_network = individual_df %>%
     filter(permanent) %>% 
@@ -161,6 +163,8 @@ hiring_network = hiring_network %>%
 
 #' Exploring centrality scores
 #' --------------------
+## exploring centrality scores ----
+
 #' PageRank centrality is almost entirely determined by degree
 #' So we use eigenvector centrality instead
 ggplot(hiring_network, aes(degree, log10(out_pr))) +
@@ -172,7 +176,11 @@ ggplot(hiring_network, aes(degree, log10(out_pr))) +
 ## NB there seem to be (small?) differences in scores (at the low end?) across runs of the centrality algorithm
 ggplot(as_tibble(hiring_network), aes(out_centrality)) + 
     geom_density() + geom_rug() +
-    scale_x_continuous(trans = 'log10')
+    scale_x_continuous(trans = 'log10', 
+                       name = 'Out centrality') +
+    theme_minimal()
+ggsave(str_c(plots_folder, '02_out_centrality.png'), 
+       height = 3, width = 6)
 
 ggplot(as_tibble(hiring_network), aes(in_centrality)) + 
     geom_density() + geom_rug() +
@@ -180,7 +188,7 @@ ggplot(as_tibble(hiring_network), aes(in_centrality)) +
 
 ggplot(as_tibble(hiring_network), 
        aes(out_centrality, in_centrality, 
-           color = cluster_lvl4, 
+           color = cluster_label, 
            text = univ_name)) +
     geom_jitter() + 
     scale_x_log10() + scale_y_log10()
@@ -283,22 +291,28 @@ univ_df = hiring_network %>%
     rename(univ_id = name) %>%
     left_join(univ_df, .)
 
-## Movement w/in high-prestige group
+## Movement down the prestige hierarchy
 individual_df %>%
     filter(permanent) %>%
     left_join(select(univ_df, univ_id, out_centrality),
               by = c('placing_univ_id' = 'univ_id')) %>%
     left_join(select(univ_df, univ_id, out_centrality),
               by = c('hiring_univ_id' = 'univ_id')) %>%
-    filter(out_centrality.y > 10^-15) %>%
-    select(person_id,
+    # filter(out_centrality.y > 10^-15) %>%
+    select(person_id, aos_category,
            placing = out_centrality.x,
            hiring = out_centrality.y) %>%
-    gather(variable, value, -person_id) %>%
+    gather(variable, value, placing, hiring) %>%
     mutate(variable = fct_rev(variable)) %>%
     ggplot(aes(variable, log10(value))) +
     geom_point() +
-    geom_line(aes(group = person_id))
+    geom_line(aes(group = person_id), 
+              alpha = .25) +
+    xlab('university') +
+    ylab('centrality (log10)') +
+    theme_minimal()
+ggsave(str_c(plots_folder, '02_prestige_movement.png'), 
+       width = 3, height = 4)
 
 ## Diagonal line indicates where hiring program has the same centrality as the placing program.  
 ## Most placements are below this line, indicating that the centrality measure captures the idea that people typically are hired by programs with lower status
@@ -321,6 +335,7 @@ individual_df %>%
 
 #' Community detection
 #' --------------------
+## community detection ----
 ## Extract giant component
 hiring_network_gc = hiring_network %>%
     components %>% 
@@ -380,14 +395,14 @@ univ_df %>%
 
 #' **Finding: There is no correlation between semantic clusters and topological communities.**
 univ_df %>%
-    filter(!is.na(community), !is.na(cluster_lvl4)) %>%
-    select(community, cluster_lvl4) %>%
+    filter(!is.na(community), !is.na(cluster_label)) %>%
+    select(community, cluster_label) %>%
     table() %>%
     chisq.test(simulate.p.value = TRUE)
 
 univ_df %>%
-    filter(!is.na(community), !is.na(cluster_lvl4)) %>%
-    count(community, cluster_lvl4) %>%
+    filter(!is.na(community), !is.na(cluster_label)) %>%
+    count(community, cluster_label) %>%
     rename(cluster_n = n) %>%
     group_by(community) %>%
     mutate(community_tot = sum(cluster_n), 
@@ -395,7 +410,7 @@ univ_df %>%
            H = sum(cluster_frac * log2(cluster_frac))) %>%
     ungroup() %>%
     ggplot(aes(fct_reorder(community, community_tot, .desc = FALSE),
-               cluster_n, fill = cluster_lvl4)) + 
+               cluster_n, fill = cluster_label)) + 
     geom_col() + 
     coord_flip() +
     xlab('Topological communities') +
@@ -406,6 +421,7 @@ univ_df %>%
 
 #' High-prestige universities
 #' --------------------
+## high-prestige universities
 ## Start w/ Oxford, and work upstream
 ## Only need to go 11 or 12 steps to get closure
 1:25 %>%
@@ -476,8 +492,8 @@ ggplot(univ_df, aes(prestige, log10(out_centrality))) +
 ## Prestige status and clusters
 ## High-prestige are spread throughout, but #5 is mostly low-prestige
 univ_df %>%
-    filter(!is.na(cluster_lvl4)) %>%
-    ggplot(aes(cluster_lvl4, color = prestige)) + 
+    filter(!is.na(cluster_label)) %>%
+    ggplot(aes(cluster_label, color = prestige)) + 
     geom_point(stat = 'count') +
     geom_line(aes(group = prestige), stat = 'count')
 ## High-prestige are mostly in the largest community
@@ -502,9 +518,17 @@ individual_df %>%
 #' This is also not yet controlling for graduation year, area, or demographics. 
 ggplot(univ_df, aes(prestige, perm_placement_rate, 
                     label = univ_name)) + 
-    geom_violin(color = 'red', draw_quantiles = .5) +
-    geom_jitter(aes(size = total_placements)) +
-    scale_y_continuous(labels = scales::percent_format())
+    geom_sina(aes(size = total_placements), 
+              alpha = .5) +
+    geom_violin(color = 'red', draw_quantiles = .5, 
+                fill = 'transparent') +
+    # geom_jitter(aes(size = total_placements)) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    ylab('permanent placement rate') +
+    scale_size(name = 'total placements') +
+    theme_minimal()
+ggsave(str_c(plots_folder, '02_prestige_placement.png'), 
+       width = 6, height = 4)
 plotly::ggplotly()
 
 univ_df %>%
@@ -600,35 +624,37 @@ ggsave(str_c(plots_folder, '02_bc_leuven.png'),
 
 ## Big giant hairy ball
 ## ~13 sec
-# tic()
-# layout_net = hiring_network %>% 
-#     layout_with_stress() %>% 
-#     `colnames<-`(c('x', 'y')) %>% 
-#     as_tibble()
-# toc()
-# 
-# hiring_network %>%
-#     # induced_subgraph(which(degree(., mode = 'out') > 0)) %>%
-#     ggraph(layout = 'manual', 
-#            node.positions = layout_net) +
-#     # geom_node_label(aes(label = univ_name, 
-#     #                     size = log10(1 + out_centrality), 
-#     #                     color = as.factor(community))) +
-#     geom_node_point(aes(#size = log10(out_centrality), 
-#                         alpha = log10(out_centrality),
-#                         # color = as.factor(community)
-#                         color = cluster_lvl4
-#                         # color = log10(out_centrality)
-#     ), size = 2) +
-#     geom_edge_fan(arrow = arrow(length = unit(.01, 'npc')),
-#                   spread = 5, alpha = .1) +
-#     # geom_edge_density() +
-#     scale_color_brewer(palette = 'Set1', na.value = 'grey40') +
-#     # scale_color_viridis() +
-#     # scale_size_discrete(range = c(2, 6)) +
-#     scale_alpha_continuous(range = c(.25, 1)) +
-#     # scale_size_continuous(range = c(1, 3)) +
-#     theme_graph()
+tic()
+layout_net = hiring_network %>%
+    layout_with_stress() %>%
+    `colnames<-`(c('x', 'y')) %>%
+    as_tibble()
+toc()
+
+hiring_network %>%
+    # induced_subgraph(which(degree(., mode = 'out') > 0)) %>%
+    ggraph(layout = 'manual',
+           node.positions = layout_net) +
+    geom_edge_fan(arrow = arrow(length = unit(.02, 'npc'), 
+                                angle = 15,
+                                type = 'closed'),
+                  spread = 5, alpha = .05) +
+    geom_node_point(aes(#size = log10(out_centrality),
+                        alpha = log10(out_centrality),
+                        # color = as.factor(community)
+                        color = cluster_label
+                        # color = log10(out_centrality)
+    ), size = 2) +
+    # scale_color_brewer(palette = 'Set1', na.value = 'black') +
+    scale_color_viridis_d(na.value = 'black', name = 'Semantic cluster') +
+    # scale_size_discrete(range = c(2, 6)) +
+    scale_alpha_continuous(range = c(.2, 1), 
+                           name = 'Out centrality (log10)') +
+    # scale_size_continuous(range = c(1, 3)) +
+    theme_graph()
+
+ggsave(str_c(plots_folder, '02_hairball.png'), 
+       width = 12, height = 6)
 
 # hiring_network_gc %>%
 #     induced_subgraph(!is.na(V(.)$cluster_lvl1)) %>%
@@ -671,9 +697,10 @@ hiring_network %>%
     # filter(!is.na(cluster_lvl4)) %>% 
     ggraph(layout = 'manual', 
        node.positions = layout_net) +
-    geom_node_point(aes(color = cluster_lvl4), show.legend = FALSE) +
-    geom_edge_fan() +
-    facet_nodes(vars(cluster_lvl4)) +
+    geom_edge_fan(alpha = .1) +
+    geom_node_point(aes(color = cluster_label), show.legend = TRUE) +
+    # facet_nodes(vars(cluster_lvl4)) +
+    scale_color_viridis_d(na.value = 'grey90') +
     theme_graph()
 
 #' Save university-level data with network statistics

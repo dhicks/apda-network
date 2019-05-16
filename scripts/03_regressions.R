@@ -268,8 +268,22 @@ ggsave(str_c(output_folder, '03_estimates.png'),
        width = 6, height = 6, 
        scale = 1.5)
 
+estimates %>% 
+    filter(entity != 'intercept', 
+           group != 'placement_year') %>% 
+    select(group, level, estimate, lower, upper) %>% 
+    mutate_if(is.factor, as.character) %>% 
+    arrange(group, level) %>% 
+    knitr::kable(format = 'latex', 
+                 digits = 2,
+                 booktabs = TRUE, 
+                 label = 'estimates', 
+                 caption = 'Estimated regression coefficients.  Lower and upper columns give the left and right endpoints, respectively, of the centered 90\\% posterior intervals.') %>% 
+    write_file(path = str_c(output_folder, '03_estimates.tex'))
+
 
 ## Marginal effects for gender and prestige ----
+## <https://stackoverflow.com/questions/45037485/calculating-marginal-effects-in-binomial-logit-using-rstanarm>
 marginals = function (dataf, model, variable, 
                       ref_value = 0L, 
                       alt_value = 1L) {
@@ -314,6 +328,27 @@ marginals_canada = individual_df %>%
     marginals(model, country, 'U.S.', 'Canada') %>% 
     apply(1, mean) %>% 
     quantile(probs = c(.05, .5, .95))
+
+
+## Schools in certain communities ----
+comms_of_interest = c(3, 5, 12, 37, 54, 
+                         8, 27, 38, 43) %>% 
+    as.character()
+
+univ_df %>% 
+    filter(community %in% comms_of_interest, 
+           total_placements > 0) %>% 
+    select(community, name = univ_name, 
+           total_placements, perm_placement_rate) %>% 
+    mutate(community = fct_relevel(community, comms_of_interest), 
+           perm_placement_rate = scales::percent_format()(perm_placement_rate)) %>% 
+    arrange(community, name) %>% 
+    knitr::kable(format = 'latex', 
+                 # digits = 2,
+                 booktabs = TRUE, 
+                 label = 'comms', 
+                 caption = 'Universities in selected topological communities.  Only universities with at least 1 placement in the data are shown.') %>% 
+    write_file(path = str_c(output_folder, '03_comms.tex'))
 
 
 sessionInfo()

@@ -11,7 +11,7 @@ theme_set(theme_minimal())
 data_folder = '../data/'
 output_folder = '../plots/'
 
-cluster_lvl = quo(cluster_lvl4)
+cluster_lvl = quo(cluster_label)
 
 load(str_c(data_folder, '01_parsed.Rdata'))
 univ_df = read_rds(str_c(data_folder, '02_univ_net_stats.rds')) %>% 
@@ -38,11 +38,13 @@ cluster_flows_df = individual_df %>%
     left_join(select(univ_df, 
                      univ_id, cluster), 
               by = c('hiring_univ_id' = 'univ_id')) %>% 
-    filter(!is.na(cluster)) %>% 
+    # filter(!is.na(cluster)) %>% 
+    mutate(cluster = fct_explicit_na(cluster)) %>% 
     left_join(select(univ_df, univ_id, cluster), 
               by = c('placing_univ_id' = 'univ_id'), 
               suffix = c('_hiring', '_placing')) %>% 
-    filter(!is.na(cluster_placing)) %>% 
+    # filter(!is.na(cluster_placing)) %>% 
+    mutate(cluster_placing = fct_explicit_na(cluster_placing)) %>% 
     count(cluster_hiring, cluster_placing)
 
 ## Non-normalized heatmap
@@ -50,7 +52,8 @@ ggplot(cluster_flows_df, aes(cluster_placing, cluster_hiring, fill = n)) +
     geom_tile() +
     geom_text(aes(label = n), color = 'white') +
     scale_fill_viridis_c(option = 'D', direction = -1) +
-    theme(panel.grid = element_blank())
+    theme(panel.grid = element_blank(), 
+          axis.text.x = element_text(angle = 20, hjust = 1))
 
 ## Heatmap, normalizing within hiring clusters
 row_norm = cluster_flows_df %>% 
@@ -62,7 +65,8 @@ row_norm = cluster_flows_df %>%
     stat_function(fun = identity, linetype = 'dashed', inherit.aes = FALSE) +
     geom_text(aes(label = scales::percent_format(2)(share)), color = 'white') +
     scale_fill_viridis_c(option = 'A', direction = -1) +
-    theme(panel.grid = element_blank()) +
+    theme(panel.grid = element_blank(), 
+          axis.text.x = element_text(angle = 20, hjust = 1)) +
     ggtitle('Where do clusters hire from?', 
             subtitle = 'Shares within hiring clusters (rows)')
 
@@ -76,7 +80,8 @@ col_norm = cluster_flows_df %>%
     stat_function(fun = identity, linetype = 'dashed', inherit.aes = FALSE) +
     geom_text(aes(label = scales::percent_format(2)(share)), color = 'white') +
     scale_fill_viridis_c(option = 'A', direction = -1) +
-    theme(panel.grid = element_blank()) +
+    theme(panel.grid = element_blank(), 
+          axis.text.x = element_text(angle = 20, hjust = 1)) +
     ggtitle('Where do clusters place their graduates?', 
             subtitle = 'Shares within placing clusters (columns)')
 
@@ -84,27 +89,33 @@ col_norm = cluster_flows_df %>%
 
 plot_grid(col_norm, row_norm)
 
+ggsave(str_c(output_folder, '04_cluster_heatmaps.png'), 
+       width = 6, height = 3, scale = 2)
+
 ## Except for 1 and 5, most clusters *don't* strongly place within themselves
 ## Except for 5 and 9, a plurality of hires come from cluster 1
 
 ## Alluvial plot
 ## Read:  within all clusters (except maybe #6), a plurality of PhDs are placed at other programs in the cluster
 cluster_flows_df %>%
+    filter(cluster_hiring != '(Missing)', 
+           cluster_placing != '(Missing)') %>% 
     gather_set_data(1:2) %>% 
     mutate(x = fct_relevel(x, 'cluster_placing')) %>% 
     ggplot(aes(x, id = id, split = y, value = n)) +
-    geom_parallel_sets(aes(fill = cluster_hiring), axis.width = .1, 
+    geom_parallel_sets(aes(fill = cluster_hiring), axis.width = .3, 
                        show.legend = FALSE) +
-    geom_parallel_sets_axes(axis.width = .1) +
-    geom_parallel_sets_labels(color = 'white', angle = 0) +
+    geom_parallel_sets_axes(axis.width = .3, 
+                            fill = 'grey80') +
+    geom_parallel_sets_labels(color = 'black', angle = 0) +
     xlab('') +
     scale_y_continuous(breaks = NULL, labels = NULL) +
-    scale_fill_viridis_d(option = 'C') +
+    scale_fill_viridis_d(option = 'C', direction = 1) +
     ggtitle('Flows between semantic clusters', 
             subtitle = Sys.time())
 
 ggsave(str_c(output_folder, '05_cluster_flow.png'), 
-       width = 6, height = 4, scale = 1.5)
+       width = 6, height = 4, scale = 2)
 
 ## Normalizing within hiring clusters
 ## These are harder to read then they would seem
