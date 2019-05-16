@@ -1,6 +1,7 @@
 ## Load and parse data
 ## Setup --------------------
 library(tidyverse)
+library(assertthat)
 
 data_folder = '../data/'
 
@@ -144,12 +145,28 @@ univ_location = read_csv(str_c(data_folder,
                                TRUE ~ country))
 
 ## Clusters
+cluster_labels = tribble(
+    ~ cluster_lvl4, ~ cluster_label, 
+    1, 'Core Analytic', 
+    2, 'Social/Political Focus', 
+    3, 'Pluralist', 
+    4, 'Broad Analytic', 
+    5, 'Core Continental', 
+    6, 'Mind', 
+    7, 'Ethics Focus', 
+    8, 'Metaphysics Focus', 
+    9, 'Core Science'
+)
+
 clusters_df = read_csv(str_c(data_folder, 
                              '00_clusterOutput_2019-03-14.csv')) %>% 
     # rename(ID = X1) %>%
     rename_at(vars(contains('Lvl')), 
               funs(str_c('cluster_', tolower(.)))) %>%
+    left_join(cluster_labels) %>% 
     mutate_if(is.numeric, as.character)
+
+assert_that(all(!is.na(clusters_df$cluster_label)))
 
 ## Build canonical names + attach clusters
 univ_df = tibble(univ_id = c(individual_df$placing_univ_id,
