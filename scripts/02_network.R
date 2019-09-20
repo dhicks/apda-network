@@ -22,7 +22,7 @@ library(tidyverse)
 library(igraph)
 library(tidygraph)
 library(ggraph)
-library(smglr)
+# library(smglr)
 library(broom)
 library(ggforce)
 
@@ -379,11 +379,27 @@ walk_length
 
 communities = cluster_walktrap(hiring_network_gc, steps = walk_length)
 V(hiring_network_gc)$community = membership(communities)
+
+## Summary of community sizes
+hiring_network_gc %>% 
+    as_tibble() %>% 
+    count(community) %>% 
+    pull(n) %>% 
+    summary()
+
 univ_df = univ_df %>%
     left_join({hiring_network_gc %>%
             as_tibble() %>% 
             select(univ_id = name, community) %>%
             mutate(community = as.character(community))})
+
+univ_df %>% 
+    filter(!is.na(community)) %>% 
+    count(community) %>% 
+    ggplot(aes(n)) +
+    geom_bar(aes(text = n)) +
+    scale_x_continuous(name = 'Community size (# programs)')
+plotly::ggplotly()
 
 cluster_vars = univ_df %>% 
     select(matches('cluster')) %>% 
@@ -451,23 +467,24 @@ length(V(prestigious)) / sum(univ_df$total_placements > 0, na.rm = TRUE)
 length(E(prestigious)) / length(E(hiring_network))
 length(E(prestigious)) / nrow(individual_df)
 
-layout_prestigious = layout_with_focus(prestigious, 
-                                       which(V(prestigious)$univ_name == 'University of Oxford')) %>% 
-    `colnames<-`(c('x', 'y')) %>% 
-    as_tibble()
+# layout_prestigious = layout_with_focus(prestigious, 
+#                                        which(V(prestigious)$univ_name == 'University of Oxford')) %>% 
+#     `colnames<-`(c('x', 'y')) %>% 
+#     as_tibble()
+layout_prestigious = create_layout(prestigious, 'focus', 
+                                   focus = which(V(prestigious)$univ_name == 'University of Oxford'))
 
 # png(file = '02_prestigious_net.png', 
 #     width = 11, height = 11, units = 'in', res = 400)
 # set.seed(24)
-ggraph(prestigious, layout = 'manual', 
-       node.positions = layout_prestigious) + 
+ggraph(layout_prestigious) + 
     geom_node_label(aes(label = univ_name, 
                         size = log10(out_centrality), 
                         fill = log10(out_centrality)),
                     color = 'white') + 
     geom_edge_fan(arrow = arrow(length = unit(.01, 'npc')), 
                   alpha = .25,
-                  spread = 5) +
+                  strength = 5) +
     scale_size_continuous(range = c(.5, 3), guide = FALSE) +
     scale_fill_viridis(name = 'out centrality (log10)') +
     coord_cartesian(xlim = c(-3.5, 5.5), clip = 'on') +
@@ -624,21 +641,35 @@ ggsave(str_c(plots_folder, '02_bc_leuven.png'),
 
 ## Big giant hairy ball
 ## ~13 sec
+# tic()
+# layout_net = hiring_network %>%
+#     layout_with_stress() %>%
+#     `colnames<-`(c('x', 'y')) %>%
+#     as_tibble()
+# toc()
+
+## Focus on Oxford
+## GC only; ~7 sec
+# tic()
+# layout_net = create_layout(hiring_network_gc, 'focus', focus = 512)
+# toc()
+
+## Stress majorization
+## ~2 sec
 tic()
-layout_net = hiring_network %>%
-    layout_with_stress() %>%
-    `colnames<-`(c('x', 'y')) %>%
-    as_tibble()
+layout_net = create_layout(hiring_network_gc, 'stress')
 toc()
 
-hiring_network %>%
-    # induced_subgraph(which(degree(., mode = 'out') > 0)) %>%
-    ggraph(layout = 'manual',
-           node.positions = layout_net) +
-    geom_edge_fan(arrow = arrow(length = unit(.02, 'npc'), 
+layout_net %>%
+    ## NB neither of these preserve the layout_tbl_graph class, which breaks things when we get to ggraph()
+    # filter(total_placements > 0) %>% 
+    # induced_subgraph(which(degree(., mode = 'out') > 0)) %>% 
+    ggraph() +
+    geom_edge_parallel(arrow = arrow(length = unit(.02, 'npc'), 
                                 angle = 15,
                                 type = 'closed'),
-                  spread = 5, alpha = .05) +
+                  # spread = 5, 
+                  alpha = .05) +
     geom_node_point(aes(#size = log10(out_centrality),
                         alpha = log10(out_centrality),
                         # color = as.factor(community)
@@ -654,7 +685,7 @@ hiring_network %>%
     theme_graph()
 
 ggsave(str_c(plots_folder, '02_hairball.png'), 
-       width = 12, height = 6)
+       width = 12, height = 12)
 
 # hiring_network_gc %>%
 #     induced_subgraph(!is.na(V(.)$cluster_lvl1)) %>%

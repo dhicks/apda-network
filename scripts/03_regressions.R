@@ -8,6 +8,7 @@
 ## Regression models of placement outcomes
 #+ dependencies -----
 library(tidyverse)
+library(cowplot)
 library(broom)
 library(forcats)
 library(rstanarm)
@@ -93,7 +94,7 @@ ggplot(individual_df, aes(frac_w, 1*permanent)) +
 
 ## Descriptive statistics ----
 ## Individual-level variables (all discrete)
-individual_df %>%
+desc_1_plot = individual_df %>%
     select(permanent, aos_category, 
            graduation_year, placement_year, 
            gender) %>%
@@ -105,22 +106,27 @@ individual_df %>%
     scale_fill_brewer(palette = 'Set1') +
     xlab('') +
     coord_flip() +
-    facet_wrap(vars(variable), scales = 'free')
+    facet_wrap(vars(variable), scales = 'free', ncol = 3)
+desc_1_plot
 ggsave(str_c(output_folder, '03_descriptive_1.png'), 
+       desc_1_plot, 
        height = 2*2, width = 2*3, scale = 1.5)
 
 ## Program-level categorical
-individual_df %>%
+desc_2_plot = individual_df %>%
     select(prestige, country, 
            community, cluster) %>%
     gather(key = variable, value = value) %>%
     count(variable, value) %>% 
     ggplot(aes(fct_rev(value), n, group = variable)) +
     geom_col(aes(fill = variable), show.legend = FALSE) +
+    scale_fill_viridis_d() +
     xlab('') +
     coord_flip() +
-    facet_wrap(vars(variable), scales = 'free')
+    facet_wrap(vars(variable), scales = 'free', ncol = 3)
+desc_2_plot
 ggsave(str_c(output_folder, '03_descriptive_2.png'), 
+       desc_2_plot, 
        height = 2*2, width = 2*2, scale = 1.5)
 
 ## Program-level continuous variables
@@ -141,7 +147,7 @@ program_cont = individual_df %>%
            `hiring centrality (log10)` = in_centrality) %>% 
     gather(key = variable, value = value)
 
-ggplot(program_cont, aes(value)) +
+desc_3_plot = ggplot(program_cont, aes(value)) +
     geom_density() +
     geom_rug() +
     geom_vline(data = {program_cont %>% 
@@ -156,9 +162,23 @@ ggplot(program_cont, aes(value)) +
                 color = 'median')) +
     scale_color_brewer(palette = 'Set1', 
                        name = 'summary\nstatistic') +
-    facet_wrap(~ variable, scales = 'free')
+    facet_wrap(~ variable, scales = 'free', ncol = 3) +
+    theme(legend.position = 'bottom')
+desc_3_plot
 ggsave(str_c(output_folder, '03_descriptive_3.png'), 
+       desc_3_plot, 
        height = 2*2, width = 2*3.5, scale = 1.5)
+
+plot_grid(desc_1_plot, 
+          desc_2_plot, 
+          desc_3_plot, 
+          align = 'v', axis = 'lr', ncol = 1, 
+          labels = 'AUTO',
+          hjust = -2
+          )
+ggsave(str_c(output_folder, '03_descriptive.png'), 
+       height = 6.5*2, width = 4*2, scale = 1.5)
+
 
 
 ## Model -----
