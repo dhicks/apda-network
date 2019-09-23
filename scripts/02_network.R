@@ -218,7 +218,7 @@ plotly::ggplotly()
 # 
 # ## But extremely stable results among high-prestige
 # iterated_centrality %>%
-#     filter(min > 10^-11) %>%
+#     filter(min > 10^-12) %>%
 #     ggplot(aes(reorder(univ_id, median), 
 #                median)) + 
 #     geom_pointrange(aes(ymin = min, ymax = max)) + 
@@ -298,7 +298,7 @@ individual_df %>%
               by = c('placing_univ_id' = 'univ_id')) %>%
     left_join(select(univ_df, univ_id, out_centrality),
               by = c('hiring_univ_id' = 'univ_id')) %>%
-    # filter(out_centrality.y > 10^-15) %>%
+    # filter(out_centrality.y > 10^-12) %>%
     select(person_id, aos_category,
            placing = out_centrality.x,
            hiring = out_centrality.y) %>%
@@ -323,7 +323,7 @@ individual_df %>%
               by = c('placing_univ_id' = 'univ_id')) %>%
     left_join(select(univ_df, univ_id, out_centrality),
               by = c('hiring_univ_id' = 'univ_id')) %>%
-    filter(out_centrality.y > 10^-15) %>%
+    filter(out_centrality.y > 10^-12) %>%
     select(person_id, 
            placing = out_centrality.x, 
            hiring = out_centrality.y) %>%
@@ -556,7 +556,7 @@ univ_df %>%
 
 #' Stability of prestige status
 #' --------------------
-#' By randomly rewiring the network, we can test the stability of the prestige categories to data errors and the short time frame of our data.  In each of 500 permutations, we randomly rewire 10% of the edges in the permanent hiring network, then calculate out-centralities on the rewired network.  Using a threshold of 10^-7 for high-prestige status, we count the fraction of rewired networks in which each program is high-prestige.  
+#' By randomly rewiring the network, we can test the stability of the prestige categories to data errors and the short time frame of our data.  In each of 500 permutations, we randomly rewire 10% of the edges in the permanent hiring network, then calculate out-centralities on the rewired network.  Using a threshold of 10^-12 for high-prestige status, we count the fraction of rewired networks in which each program is high-prestige.  
 ## ~6 sec
 tic()
 set.seed(13579)
@@ -573,7 +573,7 @@ permutations = 1:500 %>%
     transpose() %>%
     map(unlist) %>%
     ## Fraction where program is high-prestige
-    map(~ sum(. > 10^-7) / length(.)) %>%
+    map(~ sum(. > 10^-12) / length(.)) %>%
     map(~ tibble(frac_high_prestige = .)) %>%
     bind_rows(.id = 'univ_id')
 toc()
@@ -605,13 +605,9 @@ bc_leuven_net = make_ego_graph(hiring_network, order = 10,
     reduce(bind_graphs) %>% 
     mutate(perm_placements = ifelse(is.na(perm_placements), 0, perm_placements))
 
-bc_leuven_layout = bc_leuven_net %>% 
-    layout_with_stress() %>% 
-    `colnames<-`(c('x', 'y')) %>% 
-    as_tibble()
+bc_leuven_layout = create_layout(bc_leuven_net, 'stress')
 
-ggraph(bc_leuven_net, layout = 'manual', 
-       node.positions = bc_leuven_layout) + 
+ggraph(bc_leuven_layout) + 
     geom_node_label(aes(label = univ_name, 
                         size = perm_placements, 
                         fill = perm_placements), 
@@ -724,15 +720,15 @@ ggsave(str_c(plots_folder, '02_hairball.png'),
 # cluster_ids %>% 
 #     map(~induced_subgraph(hiring_network, .))
 
-hiring_network %>% 
-    # filter(!is.na(cluster_lvl4)) %>% 
-    ggraph(layout = 'manual', 
-       node.positions = layout_net) +
-    geom_edge_fan(alpha = .1) +
-    geom_node_point(aes(color = cluster_label), show.legend = TRUE) +
-    # facet_nodes(vars(cluster_lvl4)) +
-    scale_color_viridis_d(na.value = 'grey90') +
-    theme_graph()
+# hiring_network %>% 
+#     # filter(!is.na(cluster_lvl4)) %>% 
+#     ggraph(layout = 'manual', 
+#        node.positions = layout_net) +
+#     geom_edge_fan(alpha = .1) +
+#     geom_node_point(aes(color = cluster_label), show.legend = TRUE) +
+#     # facet_nodes(vars(cluster_lvl4)) +
+#     scale_color_viridis_d(na.value = 'grey90') +
+#     theme_graph()
 
 #' Save university-level data with network statistics
 write_rds(univ_df, str_c(data_folder, '02_univ_net_stats.rds'))
