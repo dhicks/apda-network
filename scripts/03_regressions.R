@@ -229,6 +229,8 @@ if (!file.exists(model_file)) {
     model = read_rds(model_file)
 }
 
+prior_summary(model)
+
 #+ model_output, fig.dim = c(2.5*5, 5)
 ## Check ESS and Rhat
 ## Rhats all look good.  ESS a little low for grad years + some sigmas
