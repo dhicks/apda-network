@@ -28,6 +28,7 @@ source('../R/posterior_estimates.R')
 #+ load_data -----
 data_folder = '../data/'
 output_folder = '../plots/'
+paper_folder = '../paper/'
 
 # cluster_distances = read_csv(str_c(data_folder, 
 #                                    '00_k9distances_2019-03-15.csv')) %>% 
@@ -178,6 +179,8 @@ plot_grid(desc_1_plot,
           )
 ggsave(str_c(output_folder, '03_descriptive.png'), 
        height = 6.5*2, width = 4*2, scale = 1.5)
+ggsave(str_c(paper_folder, 'fig_descriptive.png'), 
+       height = 6.5*2, width = 4*2, scale = 1.5)
 
 
 
@@ -285,6 +288,9 @@ estimates %>%
     theme(legend.position = 'bottom')
 
 ggsave(str_c(output_folder, '03_estimates.png'), 
+       width = 6, height = 6, 
+       scale = 1.5)
+ggsave(str_c(paper_folder, 'fig_reg_estimates.png'), 
        width = 6, height = 6, 
        scale = 1.5)
 

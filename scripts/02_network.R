@@ -30,6 +30,7 @@ library(tictoc)
 
 data_folder = '../data/'
 plots_folder = '../plots/'
+paper_folder = '../paper/'
 
 ## Load data ----
 load(str_c(data_folder, '01_parsed.Rdata'))
@@ -181,6 +182,8 @@ ggplot(as_tibble(hiring_network), aes(out_centrality)) +
     theme_minimal()
 ggsave(str_c(plots_folder, '02_out_centrality.png'), 
        height = 3, width = 6)
+ggsave(str_c(paper_folder, 'fig_out_density.png'), 
+       height = 3, width = 6)
 
 ggplot(as_tibble(hiring_network), aes(in_centrality)) + 
     geom_density() + geom_rug() +
@@ -312,6 +315,8 @@ individual_df %>%
     ylab('centrality (log10)') +
     theme_minimal()
 ggsave(str_c(plots_folder, '02_prestige_movement.png'), 
+       width = 3, height = 4)
+ggsave(str_c(paper_folder, 'fig_crossing.png'), 
        width = 3, height = 4)
 
 ## Diagonal line indicates where hiring program has the same centrality as the placing program.  
@@ -493,6 +498,8 @@ ggraph(layout_prestigious) +
           plot.margin = margin(0, unit = 'cm'))
 ggsave(str_c(plots_folder, '02_prestigious_net.png'), 
        width = 6, height = 4, dpi = 600, scale = 2)
+ggsave(str_c(paper_folder, 'fig_prestigious_net.png'), 
+       width = 6, height = 4, dpi = 600, scale = 2)
 # dev.off()
 
 ## High-prestige = high centrality group
@@ -545,6 +552,8 @@ ggplot(univ_df, aes(prestige, perm_placement_rate,
     scale_size(name = 'total placements') +
     theme_minimal()
 ggsave(str_c(plots_folder, '02_prestige_placement.png'), 
+       width = 6, height = 4)
+ggsave(str_c(paper_folder, 'fig_placement.png'), 
        width = 6, height = 4)
 plotly::ggplotly()
 
@@ -681,6 +690,8 @@ layout_net %>%
     theme_graph()
 
 ggsave(str_c(plots_folder, '02_hairball.png'), 
+       width = 12, height = 12)
+ggsave(str_c(paper_folder, 'fig_hairball.png'), 
        width = 12, height = 12)
 
 # hiring_network_gc %>%
