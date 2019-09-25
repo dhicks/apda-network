@@ -211,11 +211,10 @@ if (!file.exists(model_file)) {
                    family = 'binomial',
                    ## Priors
                    ## Constant and coefficients
-                   prior_intercept = normal(0, .5), ## constant term + random intercepts
-                   prior = normal(0, .5),
+                   prior_intercept = cauchy(0, 2/3, autoscale = TRUE), ## constant term + random intercepts
+                   prior = cauchy(0, 2/3, autoscale = TRUE),
                    ## error sd
-                   prior_aux = exponential(rate = 1, 
-                                           autoscale = TRUE),
+                   prior_aux = cauchy(0, 2/3, autoscale = TRUE),
                    ## random effects covariance
                    prior_covariance =  decov(regularization = 1, 
                                              concentration = 1, 
@@ -242,7 +241,7 @@ model %>%
     # knitr::kable()
     ggplot(aes(n_eff, Rhat, label = parameter)) +
     geom_point() +
-    geom_vline(xintercept = 4000) +
+    geom_vline(xintercept = 3000) +
     geom_hline(yintercept = 1.01)
 if (require(plotly)) {
     plotly::ggplotly()    
@@ -271,6 +270,7 @@ pp_check(model, nreps = 200, plotfun = 'ppc_rootogram',
 ## 90% centered posterior intervals
 estimates = posterior_estimates(model, prob = .9)
 
+## Estimates plot
 estimates %>% 
     filter(entity != 'intercept', 
            group != 'placement_year') %>% 
@@ -285,15 +285,15 @@ estimates %>%
     xlab('') + #ylab('') +
     scale_y_continuous(labels = scales::percent_format(), 
                        name = '') +
-    coord_flip() +
+    coord_flip(ylim = c(-1, 1.75)) +
     facet_wrap(~ entity, scales = 'free') +
     theme(legend.position = 'bottom')
 
 ggsave(str_c(output_folder, '03_estimates.png'), 
-       width = 6, height = 6, 
+       width = 8, height = 4.5, 
        scale = 1.5)
 ggsave(str_c(paper_folder, 'fig_reg_estimates.png'), 
-       width = 6, height = 6, 
+       width = 8, height = 4.5, 
        scale = 1.5)
 
 estimates %>% 
@@ -339,7 +339,7 @@ marginals_gender = individual_df %>%
 apply(marginals_gender, 1, mean) %>% 
     quantile(probs = c(.05, .5, .95))
 #         5%        50%        95% 
-# 0.06819497 0.10771227 0.14670850 
+# 0.06891015 0.10920815 0.14868667
 
 
 marginals_prestige = individual_df %>% 
@@ -349,7 +349,7 @@ marginals_prestige = individual_df %>%
 apply(marginals_prestige, 1, mean) %>% 
     quantile(probs = c(.05, .5, .95))
 #          5%        50%        95% 
-# 0.07489617 0.11984656 0.16493118
+# 0.07614823 0.11987722 0.16543114 
 
 marginals_canada = individual_df %>% 
     select(-city, -state) %>% 

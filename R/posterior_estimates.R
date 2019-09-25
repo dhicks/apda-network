@@ -15,7 +15,7 @@ posterior_estimates = function(model, prob = .9) {
                                   str_detect(term, 'country') ~ 'program', 
                                   term == 'perc_w' ~ 'program', 
                                   term == 'total_placements' ~ 'program',
-                                  group == 'community' ~ 'program',
+                                  group == 'community' ~ 'program (community)',
                                   str_detect(group, 'cluster') ~ 'program',
                                   term == 'average_distance' ~ 'program',
                                   group == 'graduation_year' ~ 'individual',
