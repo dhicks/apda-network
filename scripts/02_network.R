@@ -26,6 +26,7 @@ library(ggraph)
 library(broom)
 library(ggforce)
 
+library(assertthat)
 library(tictoc)
 
 data_folder = '../data/'
@@ -35,9 +36,23 @@ paper_folder = '../paper/'
 ## Load data ----
 load(str_c(data_folder, '01_parsed.Rdata'))
 
+individual_df %>% 
+    filter(permanent) %>% 
+    nrow()
+
 #' There are 203 PhD programs producing graduate students in the data
 univ_df %>%
     filter(total_placements > 0) %>%
+    nrow()
+
+#' 167 PhD programs with permanent placements
+individual_df %>% 
+    filter(permanent) %>% 
+    count(placing_univ) %>% 
+    nrow()
+
+univ_df %>% 
+    filter(perm_placements > 0) %>% 
     nrow()
 
 #' **Finding: 37 PhD programs (37/203 = 18%) produce about 50% of permanent placements**
@@ -90,6 +105,13 @@ hiring_network = individual_df %>%
     ## Clean nodes (universities) that aren't in the network
     mutate(degree = centrality_degree(mode = 'total')) %>%
     filter(degree > 0)
+
+hiring_network
+
+assert_that(length(E(hiring_network)) == {individual_df %>% 
+        filter(permanent) %>% 
+        nrow()}, 
+        msg = 'Number of edges in network ≠ number of perm. placements')
 
 ## 1 giant component contains almost all of the schools
 components(hiring_network)$csize
@@ -176,10 +198,19 @@ ggplot(hiring_network, aes(degree, log10(out_pr))) +
 ##
 ## NB there seem to be (small?) differences in scores (at the low end?) across runs of the centrality algorithm
 ggplot(as_tibble(hiring_network), aes(out_centrality)) + 
-    geom_density() + geom_rug() +
+    # geom_density() +
+    geom_histogram(binwidth = 1, fill = 'white', color = 'black') +
+    geom_rug() +
     scale_x_continuous(trans = 'log10', 
-                       name = 'Out centrality') +
-    theme_minimal()
+                       name = 'Out centrality (log)') +
+    facet_zoom(x = out_centrality > 10^-12, 
+               ylim = c(0, 20),
+               # ylim = c(0, .02),
+               show.area = FALSE, 
+               shrink = TRUE,
+               zoom.size = .3,
+               horizontal = FALSE) +
+    theme_bw()
 ggsave(str_c(plots_folder, '02_out_centrality.png'), 
        height = 3, width = 6)
 ggsave(str_c(paper_folder, 'fig_out_density.png'), 
@@ -370,13 +401,15 @@ ggplot(comm_stats, aes(walk_len, H)) +
 ggplot(comm_stats, aes(walk_len, n_comms)) +
     geom_point() +
     geom_smooth()
-ggplot(comm_stats, aes(n_comms, delta_H)) +
+ggplot(comm_stats, aes(n_comms, H)) +
     geom_text(aes(label = walk_len))
 
 #' Select the walk length that minimizes both delta_H (flatter community distribution) and n_comms (fewer communities) using regression residuals
-walk_length = lm(delta_H ~ n_comms, data = comm_stats) %>%
+walk_length = lm(H ~ n_comms, data = comm_stats) %>%
     augment(comm_stats) %>%
-    arrange(.resid) %>%
+    # ggplot(aes(walk_len, .resid)) +
+    # geom_text(aes(label = walk_len))
+    arrange(desc(.resid)) %>%
     pull(walk_len) %>%
     first()
 
@@ -385,6 +418,7 @@ walk_length
 communities = cluster_walktrap(hiring_network_gc, steps = walk_length)
 V(hiring_network_gc)$community = membership(communities)
 
+#' Analysis of community detection
 ## Summary of community sizes
 hiring_network_gc %>% 
     as_tibble() %>% 
@@ -442,7 +476,7 @@ univ_df %>%
 
 #' High-prestige universities
 #' --------------------
-## high-prestige universities
+## high-prestige universities ----
 ## Start w/ Oxford, and work upstream
 ## Only need to go 11 or 12 steps to get closure
 1:25 %>%
@@ -563,6 +597,7 @@ univ_df %>%
                  funs(median, max, min), na.rm = TRUE)
 
 
+## prestige stability ----
 #' Stability of prestige status
 #' --------------------
 #' By randomly rewiring the network, we can test the stability of the prestige categories to data errors and the short time frame of our data.  In each of 500 permutations, we randomly rewire 10% of the edges in the permanent hiring network, then calculate out-centralities on the rewired network.  Using a threshold of 10^-12 for high-prestige status, we count the fraction of rewired networks in which each program is high-prestige.  
@@ -608,8 +643,8 @@ plotly::ggplotly()
 
 #' **Finding:** For low-prestige programs, counterfactual prestige seems to depend on the extent of the program's downstream hiring network.  Compare Boston College (19 permanent placements; 40% high prestige) to Leuven (18 permanent placements; 20% high prestige). 
 bc_leuven_net = make_ego_graph(hiring_network, order = 10, 
-                           nodes = c('529', '38'),
-                           mode = 'out') %>% 
+                               nodes = c('529', '38'),
+                               mode = 'out') %>% 
     map(as_tbl_graph) %>%
     reduce(bind_graphs) %>% 
     mutate(perm_placements = ifelse(is.na(perm_placements), 0, perm_placements))
@@ -637,6 +672,7 @@ ggsave(str_c(plots_folder, '02_bc_leuven.png'),
 
 #' Plotting
 #' --------------------
+## plotting ----
 #' Coarser community structure
 # large_comms = which(sizes(communities) > 20)
 # V(hiring_network_gc)$community_coarse = ifelse(
@@ -671,15 +707,15 @@ layout_net %>%
     # induced_subgraph(which(degree(., mode = 'out') > 0)) %>% 
     ggraph() +
     geom_edge_parallel(arrow = arrow(length = unit(.02, 'npc'), 
-                                angle = 15,
-                                type = 'closed'),
-                  # spread = 5, 
-                  alpha = .05) +
+                                     angle = 15,
+                                     type = 'closed'),
+                       # spread = 5, 
+                       alpha = .05) +
     geom_node_point(aes(#size = log10(out_centrality),
-                        alpha = log10(out_centrality),
-                        # color = as.factor(community)
-                        color = cluster_label
-                        # color = log10(out_centrality)
+        alpha = log10(out_centrality),
+        # color = as.factor(community)
+        color = cluster_label
+        # color = log10(out_centrality)
     ), size = 2) +
     # scale_color_brewer(palette = 'Set1', na.value = 'black') +
     scale_color_viridis_d(na.value = 'black', name = 'Semantic cluster') +
@@ -711,7 +747,7 @@ ggsave(str_c(paper_folder, 'fig_hairball.png'),
 #     theme_graph()
 
 
-#' Chord diagram
+## Chord diagram
 # hiring_network_gc %>%
 #     # induced_subgraph(which(degree(., mode = 'out') > 0)) %>%
 #     ggraph(layout = 'linear', sort.by = 'community_coarse', circular = TRUE) +
@@ -741,6 +777,7 @@ ggsave(str_c(paper_folder, 'fig_hairball.png'),
 #     scale_color_viridis_d(na.value = 'grey90') +
 #     theme_graph()
 
+## output ----
 #' Save university-level data with network statistics
 write_rds(univ_df, str_c(data_folder, '02_univ_net_stats.rds'))
 
