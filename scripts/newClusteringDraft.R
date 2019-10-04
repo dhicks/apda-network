@@ -254,7 +254,8 @@ university.and.cluster <- complete.data %>%
   mutate(k.2 = factor(cutree(dendrogram, k = 2))) %>% 
   mutate(k.3 = factor(cutree(dendrogram, k = 3))) %>% 
   mutate(k.8 = factor(cutree(dendrogram, k = 8))) %>% 
-  select(University.Name, k.2, k.3, k.8)
+  select(University.ID, #University.Name, 
+         k.2, k.3, k.8)
 dendrogram %>% 
   color_labels(k = 8, col = plasma(8, end = .9)) %>% 
   color_branches(k = 8, col = plasma(8, end = .9)) %>% 
@@ -264,8 +265,6 @@ dendrogram %>%
 ggsave(str_c(output_path, "dendrogram_and_labels.pdf"), width = 20, height = 30)
 
 # Write university and clustering
-university.and.cluster %>% 
-  write_csv(str_c(data_folder, "01_university_and_cluster.csv"))
-
+# write_csv(university.and.cluster, str_c(data_folder, "01_university_and_cluster.csv"))
 write_rds(university.and.cluster, str_c(data_folder, '01_university_and_cluster.Rds'))
 
