@@ -9,18 +9,24 @@ library(cowplot)
 library(dendextend)
 library(viridis)
 
+theme_set(theme_bw())
+
 # Also needed: clusterSim. Not loading all of the package because it loads MASS and messes up select().
 set.seed(123)
+
+data_folder = '../data/'
+output_path = str_c('../output/', '01_')
 
 
 # Process graduates -----
 
 # Load the table that links grad AOS code with the name of the area.
-AOScorrespondence = read_csv(file = "Data/AosCorrespondenceTable.csv", col_names = c("Code", "Name")) %>% 
+AOScorrespondence = read_csv(file = str_c(data_folder, "00_AosCorrespondenceTable.csv"), 
+                             col_names = c("Code", "Name")) %>% 
   mutate_all(factor)
 
 # Load University x Number of Grads per AOS area data
-grads <- read_csv(file = "Data/newGradData.csv") %>% 
+grads <- read_csv(file = str_c(data_folder, "00_newGradData.csv")) %>% 
   select(-Unknown) %>% 
   mutate(UniversityID = factor(UniversityID)) %>% 
   rename(University.ID = UniversityID)
@@ -50,7 +56,7 @@ grads <- grads %>%
 # Process keywords ----
 
 # Load survey data as University x Keyword occurrence count
-keywords <- read_csv(file = "Data/newSurveyData.csv") %>% 
+keywords <- read_csv(file = str_c(data_folder, "00_newSurveyData.csv")) %>% 
   rename(University.ID = `University ID`, University.Name = `University Name`) %>% 
   mutate(University.Name = factor(University.Name), University.ID = factor(University.ID)) 
 
@@ -113,7 +119,7 @@ sil.plot <- ggplot(all.silhouettes[1:14,], aes(x = k, y = Mean.Sil, label = k)) 
   theme_cowplot() + 
   scale_x_continuous()
 sil.plot
-ggsave("figures/sil_plot.png", height = 15, width = 25, unit ="cm")
+ggsave(str_c(output_path, "sil_plot.png"), height = 15, width = 25, unit ="cm")
 
 # Compute Davies-Bouldin for each value of k between 2 and 100 and plot it
 all.DB <- map_dfr(2:100, function(x){
@@ -132,11 +138,11 @@ db.plot <- ggplot(all.DB[1:14,], aes(x = k, y = Davies.Bouldin, label = k)) +
   theme_cowplot() + 
   scale_x_continuous()
 db.plot
-ggsave("figures/db_plot.png", height = 15, width = 25, unit ="cm")
+ggsave(str_c(output_path, "db_plot.png"), height = 15, width = 25, unit ="cm")
 
 # Plot both in a panel
 plot_grid(sil.plot, db.plot, labels = c("A", "B"))
-ggsave("figures/measures_panel.png", height = 15, width = 25, unit ="cm")
+ggsave(str_c(output_path, "measures_panel.png"), height = 15, width = 25, unit ="cm")
 
 # Plot both at the same time 
 all.DB %>% 
@@ -185,7 +191,7 @@ k.2.plot <- dendrogram %>%
   as.ggdend() %>% 
   ggplot(labels = FALSE)
 k.2.plot
-ggsave("figures/k_2.png", height = 15, width = 25, unit ="cm")
+ggsave(str_c(output_path, "k_2.png"), height = 15, width = 25, unit ="cm")
 
 # k = 3
 
@@ -211,7 +217,7 @@ k.3.plot <- dendrogram %>%
   as.ggdend() %>% 
   ggplot(labels = FALSE)
 k.3.plot
-ggsave("figures/k_3.png", height = 15, width = 25, unit ="cm")
+ggsave(str_c(output_path, "k_3.png"), height = 15, width = 25, unit ="cm")
 
 # k = 8
 k.8 <- complete.data %>% 
@@ -235,10 +241,10 @@ k.8.plot <- dendrogram %>%
   as.ggdend() %>% 
   ggplot(labels = FALSE, nodes = TRUE)
 k.8.plot
-ggsave("figures/k_8.png", height = 15, width = 25, unit ="cm")
+ggsave(str_c(output_path, "k_8.png"), height = 15, width = 25, unit ="cm")
 
 plot_grid(k.2.plot, k.3.plot, k.8.plot, ncol = 1, labels = c("A", "B", "C"))
-ggsave("figures/cluster_panel.png", height = 10, width = 6, unit ="in")
+ggsave(str_c(output_path, "cluster_panel.png"), height = 10, width = 6, unit ="in")
 
 # Get all universities along with their clustering in each value of k
 # Note that the clusters in the paper do not have the same numbering as the clusters here;
@@ -255,9 +261,11 @@ dendrogram %>%
   set("branches_lwd", c(.8,.8,.8)) %>% 
   as.ggdend() %>% 
   ggplot(labels = TRUE, horiz = TRUE)
-ggsave("figures/dendrogram_and_labels.pdf", width = 20, height = 30)
+ggsave(str_c(output_path, "dendrogram_and_labels.pdf"), width = 20, height = 30)
 
 # Write university and clustering
 university.and.cluster %>% 
-  write_csv("university_and_cluster.csv")
+  write_csv(str_c(data_folder, "01_university_and_cluster.csv"))
+
+write_rds(university.and.cluster, str_c(data_folder, '01_university_and_cluster.Rds'))
 
