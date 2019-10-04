@@ -26,7 +26,7 @@ AOScorrespondence = read_csv(file = str_c(data_folder, "00_AosCorrespondenceTabl
   mutate_all(factor)
 
 # Load University x Number of Grads per AOS area data
-grads <- read_csv(file = str_c(data_folder, "00_newGradData.csv")) %>% 
+grads <- read_csv(file = str_c(data_folder, "00_newGradData_2018-12-11.csv")) %>% 
   select(-Unknown) %>% 
   mutate(UniversityID = factor(UniversityID)) %>% 
   rename(University.ID = UniversityID)
@@ -56,7 +56,7 @@ grads <- grads %>%
 # Process keywords ----
 
 # Load survey data as University x Keyword occurrence count
-keywords <- read_csv(file = str_c(data_folder, "00_newSurveyData.csv")) %>% 
+keywords <- read_csv(file = str_c(data_folder, "00_newSurveyData_2018-12-11.csv")) %>% 
   rename(University.ID = `University ID`, University.Name = `University Name`) %>% 
   mutate(University.Name = factor(University.Name), University.ID = factor(University.ID)) 
 
