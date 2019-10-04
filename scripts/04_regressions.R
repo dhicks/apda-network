@@ -27,7 +27,7 @@ source('../R/posterior_estimates.R')
 
 #+ load_data -----
 data_folder = '../data/'
-output_folder = '../plots/04'
+output_folder = '../output/04_'
 paper_folder = '../paper/'
 
 # cluster_distances = read_csv(str_c(data_folder, 
