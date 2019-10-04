@@ -6,16 +6,12 @@ theme_set(theme_minimal())
 
 
 #+ load_data -----
-## This should be identical to the load_data block in 03; 
-## which probably means 03 should save that dataset
 data_folder = '../data/'
-output_folder = '../plots/'
+output_folder = '../plots/05'
 
-cluster_lvl = quo(cluster_label)
-
-load(str_c(data_folder, '01_parsed.Rdata'))
-univ_df = read_rds(str_c(data_folder, '02_univ_net_stats.rds')) %>% 
-    rename(cluster = !!cluster_lvl)
+load(str_c(data_folder, '02_parsed.Rdata'))
+univ_df = read_rds(str_c(data_folder, '03_univ_net_stats.rds')) %>% 
+    rename(cluster = cluster_label)
 
 
 ## Cluster vs. prestige ----
@@ -89,7 +85,7 @@ col_norm = cluster_flows_df %>%
 
 plot_grid(col_norm, row_norm)
 
-ggsave(str_c(output_folder, '04_cluster_heatmaps.png'), 
+ggsave(str_c(output_folder, 'cluster_heatmaps.png'), 
        width = 6, height = 3, scale = 2)
 
 ## Except for 1 and 5, most clusters *don't* strongly place within themselves
@@ -114,7 +110,7 @@ cluster_flows_df %>%
     ggtitle('Flows between semantic clusters', 
             subtitle = Sys.time())
 
-ggsave(str_c(output_folder, '05_cluster_flow.png'), 
+ggsave(str_c(output_folder, 'cluster_flow.png'), 
        width = 6, height = 4, scale = 2)
 
 ## Normalizing within hiring clusters
