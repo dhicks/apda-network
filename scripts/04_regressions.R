@@ -27,7 +27,7 @@ source('../R/posterior_estimates.R')
 
 #+ load_data -----
 data_folder = '../data/'
-output_folder = '../plots/'
+output_folder = '../plots/04'
 paper_folder = '../paper/'
 
 # cluster_distances = read_csv(str_c(data_folder, 
@@ -38,8 +38,8 @@ paper_folder = '../paper/'
 # ggplot(cluster_distances, aes(cluster, scale(average_distance))) +
 #     geom_label(aes(label = n, fill = n, size = n), color = 'white')
 
-load(str_c(data_folder, '01_parsed.Rdata'))
-univ_df = read_rds(str_c(data_folder, '02_univ_net_stats.rds')) #%>% 
+load(str_c(data_folder, '02_parsed.Rdata'))
+univ_df = read_rds(str_c(data_folder, '03_univ_net_stats.rds')) #%>% 
     # left_join(cluster_distances)
 
 individual_df = individual_df %>%
@@ -59,6 +59,7 @@ individual_df = individual_df %>%
            perc_high_prestige = 100*frac_high_prestige)
 
 ## Variables to consider: aos_category; graduation_year; placement_year; prestige; out_centrality; cluster; community; placing_univ_id; gender; country; perc_w; total_placements
+
 
 ## Giant pairs plot/correlogram ----
 ## perc_high_prestige, out_centrality, and prestige are all tightly correlated
@@ -109,7 +110,7 @@ desc_1_plot = individual_df %>%
     coord_flip() +
     facet_wrap(vars(variable), scales = 'free', ncol = 3)
 desc_1_plot
-ggsave(str_c(output_folder, '03_descriptive_1.png'), 
+ggsave(str_c(output_folder, 'descriptive_1.png'), 
        desc_1_plot, 
        height = 2*2, width = 2*3, scale = 1.5)
 
@@ -126,7 +127,7 @@ desc_2_plot = individual_df %>%
     coord_flip() +
     facet_wrap(vars(variable), scales = 'free', ncol = 3)
 desc_2_plot
-ggsave(str_c(output_folder, '03_descriptive_2.png'), 
+ggsave(str_c(output_folder, 'descriptive_2.png'), 
        desc_2_plot, 
        height = 2*2, width = 2*2, scale = 1.5)
 
@@ -166,7 +167,7 @@ desc_3_plot = ggplot(program_cont, aes(value)) +
     facet_wrap(~ variable, scales = 'free', ncol = 3) +
     theme(legend.position = 'bottom')
 desc_3_plot
-ggsave(str_c(output_folder, '03_descriptive_3.png'), 
+ggsave(str_c(output_folder, 'descriptive_3.png'), 
        desc_3_plot, 
        height = 2*2, width = 2*3.5, scale = 1.5)
 
@@ -177,7 +178,7 @@ plot_grid(desc_1_plot,
           labels = 'AUTO',
           hjust = -2
           )
-ggsave(str_c(output_folder, '03_descriptive.png'), 
+ggsave(str_c(output_folder, 'descriptive.png'), 
        height = 6.5*2, width = 4*2, scale = 1.5)
 ggsave(str_c(paper_folder, 'fig_descriptive.png'), 
        height = 6.5*2, width = 4*2, scale = 1.5)
@@ -186,7 +187,7 @@ ggsave(str_c(paper_folder, 'fig_descriptive.png'),
 
 ## Model -----
 #+ model, cache = FALSE
-model_file = str_c(data_folder, '03_model.Rds')
+model_file = str_c(data_folder, '04_model.Rds')
 if (!file.exists(model_file)) {
     ## ~700 seconds
     tic()
@@ -289,7 +290,7 @@ estimates %>%
     facet_wrap(~ entity, scales = 'free') +
     theme(legend.position = 'bottom')
 
-ggsave(str_c(output_folder, '03_estimates.png'), 
+ggsave(str_c(output_folder, 'estimates.png'), 
        width = 8, height = 4.5, 
        scale = 1.5)
 ggsave(str_c(paper_folder, 'fig_reg_estimates.png'), 
@@ -307,7 +308,7 @@ estimates %>%
                  booktabs = TRUE, 
                  label = 'estimates', 
                  caption = 'Estimated regression coefficients.  Lower and upper columns give the left and right endpoints, respectively, of the centered 90\\% posterior intervals.') %>% 
-    write_file(path = str_c(output_folder, '03_estimates.tex'))
+    write_file(path = str_c(output_folder, 'estimates.tex'))
 
 
 ## Marginal effects for gender and prestige ----
@@ -376,7 +377,7 @@ univ_df %>%
                  booktabs = TRUE, 
                  label = 'comms', 
                  caption = 'Universities in selected topological communities.  Only universities with at least 1 placement in the data are shown.') %>% 
-    write_file(path = str_c(output_folder, '03_comms.tex'))
+    write_file(path = str_c(output_folder, 'comms.tex'))
 
 
 sessionInfo()
