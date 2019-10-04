@@ -25,16 +25,17 @@ library(ggraph)
 # library(smglr)
 library(broom)
 library(ggforce)
+library(ggbeeswarm)
 
 library(assertthat)
 library(tictoc)
 
 data_folder = '../data/'
-plots_folder = '../plots/'
+plots_path = '../output/03_'
 paper_folder = '../paper/'
 
 ## Load data ----
-load(str_c(data_folder, '01_parsed.Rdata'))
+load(str_c(data_folder, '02_parsed.Rdata'))
 
 individual_df %>% 
     filter(permanent) %>% 
@@ -211,7 +212,7 @@ ggplot(as_tibble(hiring_network), aes(out_centrality)) +
                zoom.size = .3,
                horizontal = FALSE) +
     theme_bw()
-ggsave(str_c(plots_folder, '02_out_centrality.png'), 
+ggsave(str_c(plots_path, 'out_centrality.png'), 
        height = 3, width = 6)
 ggsave(str_c(paper_folder, 'fig_out_density.png'), 
        height = 3, width = 6)
@@ -345,7 +346,7 @@ individual_df %>%
     xlab('university') +
     ylab('centrality (log10)') +
     theme_minimal()
-ggsave(str_c(plots_folder, '02_prestige_movement.png'), 
+ggsave(str_c(plots_path, 'prestige_movement.png'), 
        width = 3, height = 4)
 ggsave(str_c(paper_folder, 'fig_crossing.png'), 
        width = 3, height = 4)
@@ -530,7 +531,7 @@ ggraph(layout_prestigious) +
     theme_graph() +
     theme(legend.position = 'bottom', 
           plot.margin = margin(0, unit = 'cm'))
-ggsave(str_c(plots_folder, '02_prestigious_net.png'), 
+ggsave(str_c(plots_path, 'prestigious_net.png'), 
        width = 6, height = 4, dpi = 600, scale = 2)
 ggsave(str_c(paper_folder, 'fig_prestigious_net.png'), 
        width = 6, height = 4, dpi = 600, scale = 2)
@@ -591,7 +592,7 @@ ggplot(univ_df, aes(prestige, perm_placement_rate,
     ylab('permanent placement rate') +
     scale_size(name = 'total placements') +
     theme_minimal()
-ggsave(str_c(plots_folder, '02_prestige_placement.png'), 
+ggsave(str_c(plots_path, 'prestige_placement.png'), 
        width = 8, height = 4)
 ggsave(str_c(paper_folder, 'fig_placement.png'), 
        width = 8, height = 4)
@@ -673,7 +674,7 @@ ggraph(bc_leuven_layout) +
     scale_fill_viridis(na.value = 'black', name = 'permanent\nplacements') +
     theme_graph()
 
-ggsave(str_c(plots_folder, '02_bc_leuven.png'), 
+ggsave(str_c(plots_path, 'bc_leuven.png'), 
        height = 6, width = 6, dpi = 600, scale = 1.25)
 
 #' Plotting
@@ -731,7 +732,7 @@ layout_net %>%
     # scale_size_continuous(range = c(1, 3)) +
     theme_graph()
 
-ggsave(str_c(plots_folder, '02_hairball.png'), 
+ggsave(str_c(plots_path, 'hairball.png'), 
        width = 12, height = 12)
 ggsave(str_c(paper_folder, 'fig_hairball.png'), 
        width = 12, height = 12)
@@ -785,7 +786,7 @@ ggsave(str_c(paper_folder, 'fig_hairball.png'),
 
 ## output ----
 #' Save university-level data with network statistics
-write_rds(univ_df, str_c(data_folder, '02_univ_net_stats.rds'))
+write_rds(univ_df, str_c(data_folder, '03_univ_net_stats.rds'))
 
 
 sessionInfo()
