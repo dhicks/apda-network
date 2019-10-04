@@ -576,19 +576,25 @@ individual_df %>%
 #' This is also not yet controlling for graduation year, area, or demographics. 
 ggplot(univ_df, aes(prestige, perm_placement_rate, 
                     label = univ_name)) + 
-    geom_sina(aes(size = total_placements), 
-              alpha = .5) +
+    # geom_sina(aes(size = total_placements), 
+    #           alpha = .5) +
+    geom_beeswarm(aes(size = total_placements), 
+                  priority = 'density',
+                  cex = 2,
+                  alpha = .5) +
     geom_violin(color = 'red', draw_quantiles = .5, 
+                scale = 'count',
                 fill = 'transparent') +
     # geom_jitter(aes(size = total_placements)) +
+    scale_x_discrete(expand = expand_scale(add=c(0, 1))) +
     scale_y_continuous(labels = scales::percent_format()) +
     ylab('permanent placement rate') +
     scale_size(name = 'total placements') +
     theme_minimal()
 ggsave(str_c(plots_folder, '02_prestige_placement.png'), 
-       width = 6, height = 4)
+       width = 8, height = 4)
 ggsave(str_c(paper_folder, 'fig_placement.png'), 
-       width = 6, height = 4)
+       width = 8, height = 4)
 plotly::ggplotly()
 
 univ_df %>%
