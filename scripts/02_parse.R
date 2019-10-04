@@ -146,27 +146,28 @@ univ_location = read_csv(str_c(data_folder,
 
 ## Clusters
 cluster_labels = tribble(
-    ~ cluster_lvl4, ~ cluster_label, 
+    ~ cluster_8, ~ cluster_label, 
     1, 'Core Analytic', 
     2, 'Social/Political Focus', 
     3, 'Pluralist', 
     4, 'Broad Analytic', 
-    5, 'Core Continental', 
+    5, 'Core Continental',
     6, 'Mind', 
     7, 'Ethics Focus', 
     8, 'Metaphysics Focus', 
     9, 'Core Science'
-)
+) %>% 
+    mutate_at(vars(cluster_8), as.character)
 
-clusters_df = read_csv(str_c(data_folder, 
-                             '00_clusterOutput_2019-03-14.csv')) %>% 
-    # rename(ID = X1) %>%
-    rename_at(vars(contains('Lvl')), 
-              funs(str_c('cluster_', tolower(.)))) %>%
-    left_join(cluster_labels) %>% 
-    mutate_if(is.numeric, as.character)
+clusters_df = read_rds(str_c(data_folder, 
+                             '01_university_and_cluster.Rds')) %>% 
+    mutate_if(is.factor, as.character) %>% 
+    rename_at(vars(contains('k')), 
+              funs(str_replace(., 'k.', 'cluster_'))) %>%
+    left_join(cluster_labels)
 
-assert_that(all(!is.na(clusters_df$cluster_label)))
+assert_that(all(!is.na(clusters_df$cluster_label)), 
+            msg = 'Missing cluster labels')
 
 ## Build canonical names + attach clusters
 univ_df = tibble(univ_id = c(individual_df$placing_univ_id,
@@ -181,7 +182,7 @@ univ_df = tibble(univ_id = c(individual_df$placing_univ_id,
     ungroup() %>%
     ## AOS clusters
     left_join(clusters_df,
-              by = c('univ_name' = 'University')) %>%
+              by = c('univ_id' = 'University.ID')) %>%
     arrange(univ_name) %>%
     ## Location
     left_join(univ_location, by = 'univ_id', 
@@ -233,4 +234,4 @@ univ_df = univ_df %>%
 
 ## Output ----
 save(individual_df_unfltd, individual_df, univ_df, 
-     file = str_c(data_folder, '01_parsed.Rdata'))
+     file = str_c(data_folder, '02_parsed.Rdata'))
