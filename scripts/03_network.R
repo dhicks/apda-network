@@ -550,6 +550,28 @@ V(hiring_network_gc)$prestigious = V(hiring_network_gc)$out_centrality > 1e-12
 ggplot(univ_df, aes(prestige, log10(out_centrality))) + 
     geom_jitter()
 
+## Output alphabetical list of high-prestige programs
+univ_df %>% 
+    filter(prestige == 'high-prestige') %>% 
+    select(univ_name, cluster = cluster_label, 
+           perm_placement_rate,
+           country, 
+           # out_centrality
+           ) %>% 
+    # arrange(desc(out_centrality)) %>% view()
+    arrange(univ_name) %>% 
+    mutate(perm_placement_rate = scales::percent_format(accuracy = 2)(perm_placement_rate)) %>% 
+    knitr::kable(col.names = c('university', 'cluster', 
+                               'placement rate',
+                               'country'),
+                 format = 'latex', 
+                 longtable = TRUE,
+                 booktabs = TRUE, 
+                 # table.envir = 'sidewaystable',
+                 label = 'high.prestige', 
+                 caption = 'High-prestige universities/programs, in alphabetical order.  Placement rate refers to placements in permanent academic positions.') %>% 
+    write_file(path = str_c(plots_path, 'high.prestige.tex'))
+
 ## Prestige status and clusters
 ## High-prestige are spread throughout, but #5 is mostly low-prestige
 univ_df %>%
