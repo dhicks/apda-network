@@ -11,20 +11,28 @@ output_folder = '../plots/05'
 
 load(str_c(data_folder, '02_parsed.Rdata'))
 univ_df = read_rds(str_c(data_folder, '03_univ_net_stats.rds')) %>% 
-    rename(cluster = cluster_label)
+    mutate(cluster = case_when(cluster_3 == '1' ~ 'analytic', 
+                               cluster_3 == '2' ~ 'continental', 
+                               cluster_3 == '3' ~ 'science', 
+                               TRUE ~ 'missing'), 
+           cluster = fct_relevel(cluster, 
+                                'analytic', 'science', 
+                                'continental', 'missing'))
 
 
 ## Cluster vs. prestige ----
 ## But I think we plotted this in the network script? 
-# univ_df %>% 
-#     filter(!is.na(cluster)) %>% 
-#     count(cluster, prestige) %>% 
-#     ggplot(aes(cluster, n, color = prestige, fill = prestige, group = prestige)) +
-#     # geom_point(size = 10, position = position_dodge(width = .5)) +
-#     geom_label(aes(label = n), color = 'white', size = 5, 
-#               position = position_dodge(width = .25)) +
-#     scale_color_brewer(palette = 'Set1') +
-#     scale_fill_brewer(palette = 'Set1')
+univ_df %>%
+    filter(cluster != 'missing') %>%
+    count(cluster, prestige) %>%
+    ggplot(aes(cluster, n, color = prestige, fill = prestige, group = prestige)) +
+    # geom_point(size = 10, position = position_dodge(width = .5)) +
+    geom_label(aes(label = n), color = 'white', size = 5,
+              position = position_dodge(width = .25)) +
+    # geom_segment(aes(xend = cluster, yend = 0), 
+    #              position = position_dodge(width = .25)) +
+    scale_color_brewer(palette = 'Set1') +
+    scale_fill_brewer(palette = 'Set1')
 
 
 
@@ -94,8 +102,8 @@ ggsave(str_c(output_folder, 'cluster_heatmaps.png'),
 ## Alluvial plot
 ## Read:  within all clusters (except maybe #6), a plurality of PhDs are placed at other programs in the cluster
 cluster_flows_df %>%
-    filter(cluster_hiring != '(Missing)', 
-           cluster_placing != '(Missing)') %>% 
+    filter(cluster_hiring != 'missing', 
+           cluster_placing != 'missing') %>% 
     gather_set_data(1:2) %>% 
     mutate(x = fct_relevel(x, 'cluster_placing')) %>% 
     ggplot(aes(x, id = id, split = y, value = n)) +
