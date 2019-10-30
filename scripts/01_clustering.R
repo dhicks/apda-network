@@ -1,13 +1,10 @@
-## The current version of amap requires R version 3.6 or greater; DJH is currently running 3.5.1
-# devtools::install_version('amap', version = '0.8-16')
-
 library(cluster)
 library(tidyverse)
 library(ggdendro)
-library(amap)
 library(cowplot)
 library(dendextend)
 library(viridis)
+library(xtable)
 
 theme_set(theme_bw())
 
@@ -298,7 +295,7 @@ k.8.plot <- dendrogram %>%
 k.8.plot
 ggsave(str_c(output_path, "k_8.png"), height = 15, width = 25, unit ="cm")
 
-plot_grid(k.2.plot, k.3.plot, k.7.plot, ncol = 1, labels = c("A", "B", "C"))
+plot_grid(k.2.plot, k.3.plot, k.8.plot, ncol = 1, labels = c("A", "B", "C"))
 ggsave(str_c(output_path, "cluster_panel.png"), height = 9, width = 6, unit ="in")
 
 # Get all universities along with their clustering in each value of k
@@ -330,3 +327,6 @@ ggsave(str_c(output_path, "dendrogram_and_labels.pdf"), width = 20, height = 30)
 write_csv(university.and.cluster, str_c(data_folder, "01_university_and_cluster.csv"))
 write_rds(university.and.cluster, str_c(data_folder, '01_university_and_cluster.Rds'))
 print(xtable(university.and.cluster, type = "latex", tabular.environment="longtable"), file = str_c(output_path, "university_and_cluster.tex"))
+
+## Reproducibility
+sessionInfo()
