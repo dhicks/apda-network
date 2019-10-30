@@ -309,12 +309,11 @@ university.and.cluster <- complete.data %>%
   select(University.ID, 
          University.Name, 
          k.2, k.3, k.8) %>% 
+  # Recode from left to right
   mutate(k.3 = recode(k.3, `1` = "1", `2` = "3", `3` = "2"),
          k.8 = recode(k.8, `1` = "1", `2` = "3", `3` = "6",
                       `4` = "7", `5` = "8", 
-                      `6` = "4", `7` = "2", `8` = "5")) %>% # Recode from left to right
-  select("Name" = University.Name, `K = 2` = k.2, `K = 3` = k.3, `K = 8` = k.8) %>% 
-  arrange(Name)
+                      `6` = "4", `7` = "2", `8` = "5"))
 dendrogram %>% 
   color_labels(k = 8, col = plasma(8, end = .9)) %>% 
   color_branches(k = 8, col = plasma(8, end = .9)) %>% 
@@ -326,7 +325,15 @@ ggsave(str_c(output_path, "dendrogram_and_labels.pdf"), width = 20, height = 30)
 # Write university and clustering
 write_csv(university.and.cluster, str_c(data_folder, "01_university_and_cluster.csv"))
 write_rds(university.and.cluster, str_c(data_folder, '01_university_and_cluster.Rds'))
-print(xtable(university.and.cluster, type = "latex", tabular.environment="longtable"), file = str_c(output_path, "university_and_cluster.tex"))
+
+## Table for appendix
+university.and.cluster %>% 
+  select("Name" = University.Name, `K = 2` = k.2, `K = 3` = k.3, `K = 8` = k.8) %>% 
+  arrange(Name) %>% 
+  xtable(type = 'latex', 
+         tabular.environment = 'longtable') %>% 
+  print.xtable(file = str_c(output_path, 'university_and_cluster.tex'))
+
 
 ## Reproducibility
 sessionInfo()
