@@ -86,6 +86,7 @@ complete.data <- all.data %>%
   filter(University.ID != "10000") 
 
 raw.matrix <- complete.data %>% 
+  column_to_rownames('University.ID') %>%
   select(-contains("University")) %>% 
   t() %>%
   cor(method = "pearson")
@@ -93,6 +94,8 @@ raw.matrix <- complete.data %>%
 raw.matrix <- 1 - raw.matrix
 
 raw.matrix <- as.dist(raw.matrix)
+
+## assert_that(!is.null(attr(raw.matrix, 'Labels')))
 
 # # Compute a pairwise distance matrix using "correlation" distance (1 - corr(x, y))
 # distance.matrix <- complete.data %>% 
@@ -334,6 +337,8 @@ university.and.cluster %>%
          tabular.environment = 'longtable') %>% 
   print.xtable(file = str_c(output_path, 'university_and_cluster.tex'))
 
+## Pairwise distance matrix (used in 05 for MDS)
+write_rds(distance.matrix, str_c(data_folder, '01_dist_matrix.Rds'))
 
-## Reproducibility
+## Reproducibility ----
 sessionInfo()

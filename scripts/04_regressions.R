@@ -12,7 +12,9 @@ library(cowplot)
 library(broom)
 library(forcats)
 library(rstanarm)
-options(mc.cores = parallel::detectCores() - 2)
+options(mc.cores = min(4, 
+                       parallel::detectCores() - 2))
+# options(mc.cores = 4)
 ## bayesplot makes itself the default theme
 theme_set(theme_minimal())
 
@@ -24,6 +26,9 @@ knitr::opts_chunk$set(message = FALSE)
 
 source('../R/predictions.R')
 source('../R/posterior_estimates.R')
+
+## set to TRUE to force resampling the regression model
+force_resampling = FALSE
 
 #+ load_data -----
 data_folder = '../data/'
@@ -188,7 +193,7 @@ ggsave(str_c(paper_folder, 'fig_descriptive.png'),
 ## Model -----
 #+ model, cache = FALSE
 model_file = str_c(data_folder, '04_model.Rds')
-if (!file.exists(model_file)) {
+if (!file.exists(model_file) || force_resampling) {
     ## ~700 seconds
     tic()
     model = individual_df %>% 
@@ -274,6 +279,7 @@ estimates = posterior_estimates(model, prob = .9)
 ## Estimates plot
 estimates %>% 
     filter(entity != 'intercept', 
+           group != 'community',
            group != 'placement_year') %>% 
     ## posterior_estimates() already exponentiates estimates
     mutate_if(is.numeric, ~ . - 1) %>% 
@@ -291,14 +297,15 @@ estimates %>%
     theme(legend.position = 'bottom')
 
 ggsave(str_c(output_folder, 'estimates.png'), 
-       width = 8, height = 4.5, 
+       width = 6, height = 4, 
        scale = 1.5)
 ggsave(str_c(paper_folder, 'fig_reg_estimates.png'), 
-       width = 8, height = 4.5, 
+       width = 6, height = 4, 
        scale = 1.5)
 
 estimates %>% 
     filter(entity != 'intercept', 
+           group != 'community',
            group != 'placement_year') %>% 
     select(group, level, estimate, lower, upper) %>% 
     mutate_if(is.factor, as.character) %>% 
@@ -380,4 +387,5 @@ univ_df %>%
     write_file(path = str_c(output_folder, 'comms.tex'))
 
 
+## Reproducibility ----
 sessionInfo()

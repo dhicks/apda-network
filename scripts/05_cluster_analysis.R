@@ -7,17 +7,60 @@ theme_set(theme_minimal())
 
 #+ load_data -----
 data_folder = '../data/'
-output_folder = '../plots/05'
+output_folder = '../output/05_'
 
 load(str_c(data_folder, '02_parsed.Rdata'))
 univ_df = read_rds(str_c(data_folder, '03_univ_net_stats.rds')) %>% 
     mutate(cluster = case_when(cluster_3 == '1' ~ 'analytic', 
-                               cluster_3 == '2' ~ 'continental', 
-                               cluster_3 == '3' ~ 'science', 
+                               cluster_3 == '3' ~ 'continental', 
+                               cluster_3 == '2' ~ 'science', 
                                TRUE ~ 'missing'), 
            cluster = fct_relevel(cluster, 
-                                'analytic', 'science', 
-                                'continental', 'missing'))
+                                 'analytic', 'science', 
+                                 'continental', 'missing'))
+
+dist_matrix = read_rds(str_c(data_folder, '01_dist_matrix.Rds'))
+
+## Cluster MDS visualization ----
+mds = dist_matrix %>% 
+    cmdscale(add = TRUE, 
+             list. = TRUE) %>% 
+    .$points %>% 
+    as_tibble() %>% 
+    mutate(univ_id = labels(dist_matrix))
+
+# isomds = dist_matrix %>% 
+#     MASS::isoMDS() %>% 
+#     .$points %>% 
+#     as_tibble() %>% 
+#     mutate(univ_id = labels(dist_matrix))
+
+univ_df %>% 
+    right_join(mds) %>% 
+    ggplot(aes(V1, V2)) +
+    geom_point(aes(label = univ_name, 
+                   fill = cluster, 
+                   # size = prestige
+                   ), shape = 21) +
+    geom_mark_hull(aes(label = cluster, color = cluster)) +
+    scale_color_viridis_d(option = 'C',
+    # scale_color_brewer(palette = 'RdYlBu',
+                          name = 'cluster', 
+                          direction = 1,
+                          guide = FALSE) +
+    scale_fill_viridis_d(option = 'C', name = 'cluster', 
+                         direction = 1, guide = FALSE) +
+    coord_equal() +
+    theme_map()
+
+mds_interactive = plotly::ggplotly()
+mds_interactive
+
+htmlwidgets::saveWidget(mds_interactive, 
+                        str_c(output_folder, 'mds_interactive.html'))
+
+ggsave(str_c(output_folder, 'mds.png'), 
+       width = 6, height = 6)
 
 
 ## Cluster vs. prestige ----
@@ -26,15 +69,23 @@ univ_df %>%
     filter(cluster != 'missing') %>%
     count(cluster, prestige) %>%
     ggplot(aes(cluster, n, color = prestige, fill = prestige, group = prestige)) +
+    geom_col(aes(xend = cluster, yend = 0),
+             width = .1,
+             position = position_dodge(width = .25)) +
     # geom_point(size = 10, position = position_dodge(width = .5)) +
     geom_label(aes(label = n), color = 'white', size = 5,
-              position = position_dodge(width = .25)) +
-    # geom_segment(aes(xend = cluster, yend = 0), 
-    #              position = position_dodge(width = .25)) +
+               position = position_dodge(width = .25)) +
     scale_color_brewer(palette = 'Set1') +
     scale_fill_brewer(palette = 'Set1')
 
+univ_df %>% 
+    filter(cluster != 'missing') %>%
+    ggplot(aes(cluster, fill = prestige)) +
+    geom_bar() +
+    scale_fill_brewer(palette = 'Set1')
 
+ggsave(str_c(output_folder, 'cluster_vs_prestige.png'), 
+       width = 6, height = 4)
 
 ## Cluster-cluster flow diagrams ----
 cluster_flows_df = individual_df %>% 
@@ -96,14 +147,10 @@ plot_grid(col_norm, row_norm)
 ggsave(str_c(output_folder, 'cluster_heatmaps.png'), 
        width = 6, height = 3, scale = 2)
 
-## Except for 1 and 5, most clusters *don't* strongly place within themselves
-## Except for 5 and 9, a plurality of hires come from cluster 1
-
 ## Alluvial plot
-## Read:  within all clusters (except maybe #6), a plurality of PhDs are placed at other programs in the cluster
 cluster_flows_df %>%
-    filter(cluster_hiring != 'missing', 
-           cluster_placing != 'missing') %>% 
+    filter(cluster_hiring != 'missing',
+           cluster_placing != 'missing') %>%
     gather_set_data(1:2) %>% 
     mutate(x = fct_relevel(x, 'cluster_placing')) %>% 
     ggplot(aes(x, id = id, split = y, value = n)) +

@@ -684,7 +684,7 @@ bc_leuven_layout = create_layout(bc_leuven_net, 'stress')
 
 ggraph(bc_leuven_layout) + 
     geom_node_label(aes(label = univ_name, 
-                        size = perm_placements, 
+                        size = perm_placements,
                         fill = perm_placements), 
                     color = 'white') + 
     geom_edge_fan(arrow = arrow(angle = 45, 
@@ -699,7 +699,7 @@ ggraph(bc_leuven_layout) +
     theme_graph()
 
 ggsave(str_c(plots_path, 'bc_leuven.png'), 
-       height = 6, width = 6, dpi = 600, scale = 1.25)
+       height = 6, width = 10, dpi = 600, scale = 1.25)
 
 #' Plotting
 #' --------------------
