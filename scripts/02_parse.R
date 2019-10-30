@@ -156,8 +156,8 @@ cluster_labels = tribble(
 clusters_df = read_rds(str_c(data_folder, 
                              '01_university_and_cluster.Rds')) %>% 
     mutate_if(is.factor, as.character) %>% 
-    rename_at(vars(contains('K = ')), 
-              funs(str_replace(., 'K = ', 'cluster_'))) %>%
+    rename_at(vars(contains('k')), 
+              funs(str_replace(., 'k.', 'cluster_'))) %>%
     left_join(cluster_labels)
 
 assert_that(all(!is.na(clusters_df$cluster_label)), 
@@ -173,15 +173,24 @@ univ_df = tibble(univ_id = c(individual_df$placing_univ_id,
     summarize(n = n()) %>%
     group_by(univ_id) %>%
     summarize(univ_name = first(univ_name[which(n == max(n))])) %>% 
-    ungroup() %>%
+    ungroup() %>% 
     ## AOS clusters
     left_join(clusters_df,
-              by = c('univ_id' = 'Name')) %>%
+              by = c('univ_id' = 'University.ID')) %>%
     arrange(univ_name) %>%
+    select(-University.Name) %>% 
     ## Location
     left_join(univ_location, by = 'univ_id', 
               suffix = c('', '_y')) %>%
     select(-matches('_y'))
+
+univ_df %>% 
+    pull(cluster_label) %>% 
+    is.na() %>% 
+    `!`() %>% 
+    any() %>% 
+    assert_that(msg = 'All cluster labels are NA')
+    
 
 ## Placement totals, rates, and cumulative distributions
 ## These *do* include non-academic placements, which *do not* count as permanent
@@ -229,3 +238,6 @@ univ_df = univ_df %>%
 ## Output ----
 save(individual_df_unfltd, individual_df, univ_df, 
      file = str_c(data_folder, '02_parsed.Rdata'))
+
+## Reproducibility ----
+sessionInfo()
