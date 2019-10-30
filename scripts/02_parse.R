@@ -146,24 +146,18 @@ univ_location = read_csv(str_c(data_folder,
 
 ## Clusters
 cluster_labels = tribble(
-    ~ cluster_8, ~ cluster_label, 
-    1, 'Core Analytic', 
-    2, 'Social/Political Focus', 
-    3, 'Pluralist', 
-    4, 'Broad Analytic', 
-    5, 'Core Continental',
-    6, 'Mind', 
-    7, 'Ethics Focus', 
-    8, 'Metaphysics Focus', 
-    9, 'Core Science'
+    ~ cluster_3, ~ cluster_label, 
+    1, 'Analytic', 
+    2, 'Science', 
+    3, 'Continental'
 ) %>% 
-    mutate_at(vars(cluster_8), as.character)
+    mutate_at(vars(cluster_3), as.character)
 
 clusters_df = read_rds(str_c(data_folder, 
                              '01_university_and_cluster.Rds')) %>% 
     mutate_if(is.factor, as.character) %>% 
-    rename_at(vars(contains('k')), 
-              funs(str_replace(., 'k.', 'cluster_'))) %>%
+    rename_at(vars(contains('K = ')), 
+              funs(str_replace(., 'K = ', 'cluster_'))) %>%
     left_join(cluster_labels)
 
 assert_that(all(!is.na(clusters_df$cluster_label)), 
@@ -182,7 +176,7 @@ univ_df = tibble(univ_id = c(individual_df$placing_univ_id,
     ungroup() %>%
     ## AOS clusters
     left_join(clusters_df,
-              by = c('univ_id' = 'University.ID')) %>%
+              by = c('univ_id' = 'Name')) %>%
     arrange(univ_name) %>%
     ## Location
     left_join(univ_location, by = 'univ_id', 
