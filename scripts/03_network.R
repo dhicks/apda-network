@@ -203,7 +203,7 @@ ggplot(as_tibble(hiring_network), aes(out_centrality)) +
     geom_histogram(binwidth = 1, fill = 'white', color = 'black') +
     geom_rug() +
     scale_x_continuous(trans = 'log10', 
-                       name = 'Out centrality (log)', 
+                       name = 'Out centrality', 
                        breaks = scales::trans_breaks("log10", function(x) 10^x),
                        labels = scales::trans_format("log10", scales::math_format(10^.x))) +
     facet_zoom(x = out_centrality > 10^-12, 

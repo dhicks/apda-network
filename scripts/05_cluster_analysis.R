@@ -1,6 +1,7 @@
 library(tidyverse)
 library(ggforce)
 library(cowplot)
+library(plotly)
 
 theme_set(theme_minimal())
 
@@ -8,6 +9,8 @@ theme_set(theme_minimal())
 #+ load_data -----
 data_folder = '../data/'
 output_folder = '../output/05_'
+paper_folder = '../paper/'
+
 
 load(str_c(data_folder, '02_parsed.Rdata'))
 univ_df = read_rds(str_c(data_folder, '03_univ_net_stats.rds')) %>% 
@@ -41,10 +44,14 @@ univ_df %>%
     geom_point(aes(label = univ_name, 
                    fill = cluster, 
                    # size = prestige
-                   ), shape = 21) +
-    geom_mark_hull(aes(label = cluster, color = cluster)) +
+    ), shape = 21) +
+    geom_mark_hull(aes(label = cluster, color = cluster), 
+                   expand = unit(3, 'mm'),
+                   concavity = 5, 
+                   con.border = 'all'
+                   ) +
     scale_color_viridis_d(option = 'C',
-    # scale_color_brewer(palette = 'RdYlBu',
+                          # scale_color_brewer(palette = 'RdYlBu',
                           name = 'cluster', 
                           direction = 1,
                           guide = FALSE) +
@@ -53,15 +60,16 @@ univ_df %>%
     coord_equal() +
     theme_map()
 
-mds_interactive = plotly::ggplotly()
+mds_interactive = ggplotly()
 mds_interactive
 
-htmlwidgets::saveWidget(mds_interactive, 
-                        str_c(output_folder, 'mds_interactive.html'))
 
 ggsave(str_c(output_folder, 'mds.png'), 
        width = 6, height = 6)
-
+ggsave(str_c(paper_folder, 'fig_mds.png'), 
+       width = 6, height = 6)
+htmlwidgets::saveWidget(mds_interactive, 
+           str_c(output_folder, 'mds_interactive.html'))
 
 ## Cluster vs. prestige ----
 ## But I think we plotted this in the network script? 
@@ -85,7 +93,9 @@ univ_df %>%
     scale_fill_brewer(palette = 'Set1')
 
 ggsave(str_c(output_folder, 'cluster_vs_prestige.png'), 
-       width = 6, height = 4)
+       width = 4, height = 4)
+ggsave(str_c(paper_folder, 'fig_cluster_vs_prestige.png'), 
+       width = 4, height = 4)
 
 ## Cluster-cluster flow diagrams ----
 cluster_flows_df = individual_df %>% 
@@ -161,12 +171,13 @@ cluster_flows_df %>%
     geom_parallel_sets_labels(color = 'black', angle = 0) +
     xlab('') +
     scale_y_continuous(breaks = NULL, labels = NULL) +
-    scale_fill_viridis_d(option = 'C', direction = 1) +
-    ggtitle('Flows between semantic clusters', 
-            subtitle = Sys.time())
+    scale_fill_viridis_d(option = 'C', direction = 1)
 
 ggsave(str_c(output_folder, 'cluster_flow.png'), 
-       width = 6, height = 4, scale = 2)
+       width = 4, height = 4, scale = 2)
+ggsave(str_c(paper_folder, 'fig_cluster_flow.png'), 
+       width = 4, height = 4, scale = 2)
+
 
 ## Normalizing within hiring clusters
 ## These are harder to read then they would seem
