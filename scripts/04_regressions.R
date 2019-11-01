@@ -181,12 +181,12 @@ plot_grid(desc_1_plot,
           desc_3_plot, 
           align = 'v', axis = 'lr', ncol = 1, 
           labels = 'AUTO',
-          hjust = -2
+          hjust = -7
           )
 ggsave(str_c(output_folder, 'descriptive.png'), 
-       height = 6.5*2, width = 4*2, scale = 1.5)
+       height = 4*3, width = 3*3, scale = 1)
 ggsave(str_c(paper_folder, 'fig_descriptive.png'), 
-       height = 6.5*2, width = 4*2, scale = 1.5)
+       height = 4*3, width = 3*3, scale = 1)
 
 
 
