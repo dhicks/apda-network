@@ -13,6 +13,7 @@ set.seed(123)
 
 data_folder = '../data/'
 output_path = str_c('../output/', '01_')
+paper_path = str_c('../paper/')
 
 
 # Process graduates -----
@@ -330,12 +331,17 @@ write_csv(university.and.cluster, str_c(data_folder, "01_university_and_cluster.
 write_rds(university.and.cluster, str_c(data_folder, '01_university_and_cluster.Rds'))
 
 ## Table for appendix
-university.and.cluster %>% 
+cluster_table = university.and.cluster %>% 
+  mutate_at(vars(starts_with('k')), as.character) %>% 
   select("Name" = University.Name, `K = 2` = k.2, `K = 3` = k.3, `K = 8` = k.8) %>% 
-  arrange(Name) %>% 
-  xtable(type = 'latex', 
-         tabular.environment = 'longtable') %>% 
-  print.xtable(file = str_c(output_path, 'university_and_cluster.tex'))
+  arrange(`K = 2`, `K = 3`, `K = 8`, Name) %>% 
+  xtable(type = 'latex')
+print.xtable(cluster_table, tabular.environment = 'longtable',
+             floating = FALSE,
+             file = str_c(output_path, 'university_and_cluster.tex'))
+print.xtable(cluster_table, tabular.environment = 'longtable',
+             floating = FALSE,
+             file = str_c(paper_path, 'tab_university_and_cluster.tex'))
 
 ## Pairwise distance matrix (used in 05 for MDS)
 write_rds(distance.matrix, str_c(data_folder, '01_dist_matrix.Rds'))
