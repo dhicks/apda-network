@@ -551,7 +551,7 @@ ggplot(univ_df, aes(prestige, log10(out_centrality))) +
     geom_jitter()
 
 ## Output alphabetical list of high-prestige programs
-univ_df %>% 
+high_prestige_tab = univ_df %>% 
     filter(prestige == 'high-prestige') %>% 
     select(univ_name, cluster = cluster_label, 
            perm_placement_rate,
@@ -569,8 +569,10 @@ univ_df %>%
                  booktabs = TRUE, 
                  # table.envir = 'sidewaystable',
                  label = 'high.prestige', 
-                 caption = 'High-prestige universities/programs, in alphabetical order.  Placement rate refers to placements in permanent academic positions.') %>% 
-    write_file(path = str_c(plots_path, 'high.prestige.tex'))
+                 caption = 'High-prestige universities/programs, in alphabetical order.  Placement rate refers to placements in permanent academic positions.')
+
+write_file(high_prestige_tab, path = str_c(plots_path, 'high_prestige.tex'))
+write_file(high_prestige_tab, path = str_c(paper_folder, 'tab_high_prestige.tex'))
 
 ## Prestige status and clusters
 ## High-prestige are spread throughout, but #5 is mostly low-prestige
