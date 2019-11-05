@@ -524,7 +524,7 @@ ggraph(layout_prestigious) +
                         size = log10(out_centrality), 
                         fill = log10(out_centrality)),
                     color = 'white') + 
-    geom_edge_fan(arrow = arrow(length = unit(.01, 'npc')), 
+    geom_edge_parallel(arrow = arrow(length = unit(.01, 'npc')), 
                   alpha = .25,
                   strength = 5) +
     scale_size_continuous(range = c(.5, 3), guide = FALSE) +
@@ -687,9 +687,9 @@ ggraph(bc_leuven_layout) +
                         size = perm_placements,
                         fill = perm_placements), 
                     color = 'white') + 
-    geom_edge_fan(arrow = arrow(angle = 45, 
-                                length = unit(.1, 'inches'), 
-                                type = 'closed'), 
+    geom_edge_parallel(arrow = arrow(angle = 45,
+                                length = unit(.1, 'inches'),
+                                type = 'closed'),
                   alpha = .3) +
     scale_size_continuous(range = c(1, 5),
                           # na.value = 1,
@@ -699,6 +699,8 @@ ggraph(bc_leuven_layout) +
     theme_graph()
 
 ggsave(str_c(plots_path, 'bc_leuven.png'), 
+       height = 6, width = 10, dpi = 600, scale = 1.25)
+ggsave(str_c(paper_folder, 'fig_bc_leuven.png'), 
        height = 6, width = 10, dpi = 600, scale = 1.25)
 
 #' Plotting
