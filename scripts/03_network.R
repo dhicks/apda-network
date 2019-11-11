@@ -569,7 +569,7 @@ high_prestige_tab = univ_df %>%
                  booktabs = TRUE, 
                  # table.envir = 'sidewaystable',
                  label = 'high.prestige', 
-                 caption = 'High-prestige universities/programs, in alphabetical order.  Placement rate refers to placements in permanent academic positions.')
+                 caption = 'High-prestige universities/programs, in alphabetical order.  Placement rate refers to placements in permanent academic positions, out of all graduates.')
 
 write_file(high_prestige_tab, path = str_c(plots_path, 'high_prestige.tex'))
 write_file(high_prestige_tab, path = str_c(paper_folder, 'tab_high_prestige.tex'))

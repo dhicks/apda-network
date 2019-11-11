@@ -364,6 +364,7 @@ marginals_canada = individual_df %>%
     marginals(model, country, 'U.S.', 'Canada') %>% 
     apply(1, mean) %>% 
     quantile(probs = c(.05, .5, .95))
+marginals_canada
 
 
 ## Schools in certain communities ----
