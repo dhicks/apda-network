@@ -158,7 +158,7 @@ ggsave(str_c(output_folder, 'cluster_heatmaps.png'),
        width = 6, height = 3, scale = 2)
 
 ## Alluvial plot
-cluster_flows_df %>%
+alluvial_plot = cluster_flows_df %>%
     filter(cluster_hiring != 'missing',
            cluster_placing != 'missing') %>%
     gather_set_data(1:2) %>% 
@@ -172,11 +172,58 @@ cluster_flows_df %>%
     xlab('') +
     scale_y_continuous(breaks = NULL, labels = NULL) +
     scale_fill_viridis_d(option = 'C', direction = 1)
+alluvial_plot
 
 ggsave(str_c(output_folder, 'cluster_flow.png'), 
        width = 4, height = 4, scale = 2)
 ggsave(str_c(paper_folder, 'fig_cluster_flow.png'), 
        width = 4, height = 4, scale = 2)
+
+## Bar charts by hiring cluster
+hiring_bar = cluster_flows_df %>% 
+    filter_at(vars(starts_with('cluster')), ~ . != 'missing') %>% 
+    group_by(cluster_hiring) %>% 
+    arrange(cluster_hiring, desc(cluster_placing)) %>% 
+    mutate(share = n / sum(n), 
+           label_pos = lag(cumsum(share), default = 0) + .5*share) %>% 
+    ggplot(aes(cluster_hiring, y = share)) +
+    geom_col(aes(fill = cluster_placing)) +
+    geom_label(aes(label = scales::percent(share, accuracy = 2), 
+                   y = label_pos), 
+               position = 'identity') +
+    scale_fill_viridis_d(option = 'C', direction = 1, 
+                         name = 'Placing cluster') +
+    xlab('Hiring cluster') +
+    scale_y_continuous(labels = scales::percent_format())
+hiring_bar
+
+## All placemewnts by placing cluster
+all_bar = cluster_flows_df %>% 
+    group_by(cluster_placing) %>% 
+    summarize(n = sum(n)) %>% 
+    filter(cluster_placing != 'missing') %>% 
+    mutate(share = n / sum(n)) %>% 
+    arrange(desc(cluster_placing)) %>% 
+    mutate(label_pos= lag(cumsum(share), default = 0) + .5*share) %>% 
+    ggplot(aes('all permanent\nplacements', share)) +
+    geom_col(aes(fill = cluster_placing)) +
+    geom_label(aes(label = scales::percent(share, accuracy = 2), 
+                   y = label_pos), 
+               position = 'identity') +
+    scale_fill_viridis_d(option = 'C', direction = 1, 
+                         name = 'Placing cluster', 
+                         guide = FALSE) +
+    xlab('') +
+    scale_y_continuous(labels = scales::percent_format())
+    
+plot_grid(alluvial_plot, hiring_bar, all_bar, 
+          nrow = 1, rel_widths = c(1, 1, .3), 
+          labels = 'AUTO')
+
+ggsave(str_c(output_folder, 'cluster_flow_composite.png'), 
+       width = 8, height = 4, scale = 2)
+ggsave(str_c(paper_folder, 'fig_cluster_flow.png'), 
+       width = 8, height = 4, scale = 2)
 
 
 ## Normalizing within hiring clusters
