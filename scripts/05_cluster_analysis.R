@@ -86,16 +86,30 @@ univ_df %>%
     scale_color_brewer(palette = 'Set1') +
     scale_fill_brewer(palette = 'Set1')
 
-univ_df %>% 
+cluster_prestige_count = univ_df %>% 
     filter(cluster != 'missing') %>%
     ggplot(aes(cluster, fill = prestige)) +
     geom_bar() +
     scale_fill_brewer(palette = 'Set1')
+cluster_prestige_count
+
+cluster_prestige_prop = univ_df %>% 
+    filter(cluster != 'missing') %>% 
+    ggplot(aes(cluster, fill = prestige)) +
+    geom_bar(position = 'fill') +
+    scale_y_continuous(labels = scales::percent_format(), 
+                       name = 'share') +
+    scale_fill_brewer(palette = 'Set1', guide = FALSE)
+cluster_prestige_prop
+
+plot_grid(cluster_prestige_count, cluster_prestige_prop, 
+          rel_widths = c(1.3, 1),
+          labels = 'AUTO')
 
 ggsave(str_c(output_folder, 'cluster_vs_prestige.png'), 
-       width = 4, height = 4)
+       width = 8, height = 4)
 ggsave(str_c(paper_folder, 'fig_cluster_vs_prestige.png'), 
-       width = 4, height = 4)
+       width = 8, height = 4)
 
 ## Cluster-cluster flow diagrams ----
 cluster_flows_df = individual_df %>% 
