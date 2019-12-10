@@ -280,14 +280,15 @@ estimates = posterior_estimates(model, prob = .9)
 estimates %>% 
     filter(entity != 'intercept', 
            group != 'community',
-           group != 'placement_year') %>% 
+           group != 'placement_year', 
+           term != 'gendero') %>% 
     ## posterior_estimates() already exponentiates estimates
     mutate_if(is.numeric, ~ . - 1) %>% 
     ggplot(aes(x = level, y = estimate, 
            ymin = lower, ymax = upper, 
            color = group)) +
     geom_hline(yintercept = 0, linetype = 'dashed') +
-    geom_pointrange() + 
+    geom_pointrange(size = 1.5, fatten = 1.5) + 
     scale_color_viridis_d(name = 'covariate\ngroup') +
     xlab('') + #ylab('') +
     scale_y_continuous(labels = scales::percent_format(), 
