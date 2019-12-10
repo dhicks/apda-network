@@ -29,6 +29,9 @@ grads <- read_csv(file = str_c(data_folder, "00_newGradData_2018-12-11.csv")) %>
   mutate(UniversityID = factor(UniversityID)) %>% 
   rename(University.ID = UniversityID)
 
+# 283 universites with AOS area data, before filtering
+nrow(grads)
+
 # Remove programs with fewer than 5 grads
 # Then, remove AoS areas with fewer than 7 people total (%5 of the number of programs).
 grads <- grads %>%
@@ -57,6 +60,9 @@ grads <- grads %>%
 keywords <- read_csv(file = str_c(data_folder, "00_newSurveyData_2018-12-11.csv")) %>% 
   rename(University.ID = `University ID`, University.Name = `University Name`) %>% 
   mutate(University.Name = factor(University.Name), University.ID = factor(University.ID)) 
+
+# 170 programs with keyword data, before filtering etc.
+nrow(keywords)
 
 keyword.universities <- select(keywords, University.ID, University.Name) # Save before scaling
 
@@ -326,7 +332,9 @@ dendrogram %>%
   ggplot(labels = TRUE, horiz = TRUE)
 ggsave(str_c(output_path, "dendrogram_and_labels.pdf"), width = 20, height = 30)
 
-# Write university and clustering
+
+## Output ----
+# Write university and clustering 
 write_csv(university.and.cluster, str_c(data_folder, "01_university_and_cluster.csv"))
 write_rds(university.and.cluster, str_c(data_folder, '01_university_and_cluster.Rds'))
 
