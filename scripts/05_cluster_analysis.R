@@ -1,6 +1,7 @@
 library(tidyverse)
 library(ggforce)
 library(cowplot)
+library(ggbeeswarm)
 library(plotly)
 
 theme_set(theme_minimal())
@@ -23,6 +24,31 @@ univ_df = read_rds(str_c(data_folder, '03_univ_net_stats.rds')) %>%
                                  'continental', 'missing'))
 
 dist_matrix = read_rds(str_c(data_folder, '01_dist_matrix.Rds'))
+
+## Cluster x gender ----
+cluster_gender = univ_df %>% 
+    filter(!is.na(frac_w)) %>% 
+    ggplot(aes(cluster, frac_w, color = cluster)) +
+    geom_beeswarm() +
+    stat_summary(geom = 'crossbar',
+                 fun = 'median', 
+                 fun.max = 'median', 
+                 fun.min = 'median') +
+    # geom_violin(draw_quantiles = .5, alpha = 0) +
+    labs(x = 'program cluster') +
+    scale_y_continuous(labels = scales::percent_format(), 
+                       name = 'Share of graduates women') +
+    scale_color_viridis_d(option = 'C',
+                          # scale_color_brewer(palette = 'RdYlBu',
+                          name = 'cluster', 
+                          direction = 1,
+                          guide = FALSE)
+cluster_gender
+ggsave(str_c(output_folder, 'cluster_gender.png'), 
+       width = 6, height = 6)
+ggsave(str_c(paper_folder, 'fig_cluster_gender.png'), 
+       width = 6, height = 6)
+
 
 ## Cluster MDS visualization ----
 mds = dist_matrix %>% 
