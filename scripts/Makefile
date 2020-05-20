@@ -2,11 +2,19 @@ data := ../data
 out := ../output
 R := ../R
 
-all: cluster parse net regression
+all: cluster parse net regression clanalysis
 
 ## Clean the cached regression model
 clean:
 	rm $(data)/04_model.Rds
+
+## Additional analysis of clusters
+clanalysis: $(wildcard $(out)/05_*.*)
+$(out)/05_*.*: 05_cluster_analysis.R \
+			   $(data)/01_dist_matrix.Rds \
+			   $(data)/02_parsed.Rdata \
+			   $(data)/03_univ_net_stats.rds
+	Rscript 05_cluster_analysis.R
 
 
 ## Regression model
