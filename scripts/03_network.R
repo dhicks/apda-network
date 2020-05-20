@@ -191,7 +191,7 @@ hiring_network = hiring_network %>%
 
 #' PageRank centrality is almost entirely determined by degree
 #' So we use eigenvector centrality instead
-ggplot(hiring_network, aes(degree, log10(out_pr))) +
+ggplot(as_tibble(hiring_network), aes(degree, log10(out_pr))) +
     geom_point(aes(text = univ_name)) +
     geom_smooth(method = 'lm')
 
@@ -304,12 +304,12 @@ hiring_network %>%
     mutate(out_centrality = log10(out_centrality)) %>%
     cor()
 
-ggplot(hiring_network, 
+ggplot(as_tibble(hiring_network), 
        aes(perm_placement_rank, log10(out_centrality))) +
     geom_point() +
     geom_smooth()
 
-ggplot(hiring_network, 
+ggplot(as_tibble(hiring_network), 
        aes(log10(out_centrality), perm_placement_rate)) +
     geom_point(aes(text = univ_name)) +
     geom_smooth(method = 'lm')
