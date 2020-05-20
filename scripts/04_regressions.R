@@ -12,8 +12,10 @@ library(cowplot)
 library(broom)
 library(forcats)
 library(rstanarm)
-options(mc.cores = min(4, 
-                       parallel::detectCores() - 2))
+## As of 2020-05-20, some kind of mismatch btwn parallel and Rstudio causes a "freeze" when using multiple cores
+## <https://github.com/rstudio/rstudio/issues/6692>
+# options(mc.cores = min(4, 
+#                        parallel::detectCores() - 2))
 # options(mc.cores = 4)
 ## bayesplot makes itself the default theme
 theme_set(theme_minimal())
@@ -72,7 +74,7 @@ individual_df = individual_df %>%
 individual_df %>% 
     select(permanent, aos_category, aos_diversity, perc_high_prestige,
            graduation_year, placement_year, prestige, 
-           in_centrality, out_centrality, community, 
+           in_centrality, out_centrality, #community, 
            cluster, #average_distance,
            gender, country, perc_w, 
            total_placements) %>% 
@@ -122,7 +124,8 @@ ggsave(str_c(output_folder, 'descriptive_1.png'),
 ## Program-level categorical
 desc_2_plot = individual_df %>%
     select(prestige, country, 
-           community, cluster) %>%
+           #community, 
+           cluster) %>%
     gather(key = variable, value = value) %>%
     count(variable, value) %>% 
     ggplot(aes(fct_rev(value), n, group = variable)) +
@@ -134,7 +137,7 @@ desc_2_plot = individual_df %>%
 desc_2_plot
 ggsave(str_c(output_folder, 'descriptive_2.png'), 
        desc_2_plot, 
-       height = 2*2, width = 2*2, scale = 1.5)
+       height = 1*2, width = 2*2, scale = 1.5)
 
 ## Program-level continuous variables
 # individual_df %>%
@@ -206,7 +209,7 @@ if (!file.exists(model_file) || force_resampling) {
                        (1|placement_year) +
                        1 +
                        aos_diversity +
-                       (1|community) +
+                       # (1|community) +
                        (1|cluster) +
                        # average_distance +
                        log10(in_centrality) +
@@ -348,7 +351,7 @@ marginals_gender = individual_df %>%
 apply(marginals_gender, 1, mean) %>% 
     quantile(probs = c(.05, .5, .95))
 #         5%        50%        95% 
-# 0.06891015 0.10920815 0.14868667
+# 0.06387576 0.10352822 0.14303032
 
 
 marginals_prestige = individual_df %>% 
@@ -358,7 +361,7 @@ marginals_prestige = individual_df %>%
 apply(marginals_prestige, 1, mean) %>% 
     quantile(probs = c(.05, .5, .95))
 #          5%        50%        95% 
-# 0.07614823 0.11987722 0.16543114 
+#  0.07601945 0.11718961 0.15762968
 
 marginals_canada = individual_df %>% 
     select(-city, -state) %>% 
@@ -369,24 +372,24 @@ marginals_canada
 
 
 ## Schools in certain communities ----
-comms_of_interest = c(3, 5, 12, 37, 54, 
-                         8, 27, 38, 43) %>% 
-    as.character()
-
-univ_df %>% 
-    filter(community %in% comms_of_interest, 
-           total_placements > 0) %>% 
-    select(community, name = univ_name, 
-           total_placements, perm_placement_rate) %>% 
-    mutate(community = fct_relevel(community, comms_of_interest), 
-           perm_placement_rate = scales::percent_format()(perm_placement_rate)) %>% 
-    arrange(community, name) %>% 
-    knitr::kable(format = 'latex', 
-                 # digits = 2,
-                 booktabs = TRUE, 
-                 label = 'comms', 
-                 caption = 'Universities in selected topological communities.  Only universities with at least 1 placement in the data are shown.') %>% 
-    write_file(path = str_c(output_folder, 'comms.tex'))
+# comms_of_interest = c(3, 5, 12, 37, 54, 
+#                          8, 27, 38, 43) %>% 
+#     as.character()
+# 
+# univ_df %>% 
+#     filter(community %in% comms_of_interest, 
+#            total_placements > 0) %>% 
+#     select(community, name = univ_name, 
+#            total_placements, perm_placement_rate) %>% 
+#     mutate(community = fct_relevel(community, comms_of_interest), 
+#            perm_placement_rate = scales::percent_format()(perm_placement_rate)) %>% 
+#     arrange(community, name) %>% 
+#     knitr::kable(format = 'latex', 
+#                  # digits = 2,
+#                  booktabs = TRUE, 
+#                  label = 'comms', 
+#                  caption = 'Universities in selected topological communities.  Only universities with at least 1 placement in the data are shown.') %>% 
+#     write_file(path = str_c(output_folder, 'comms.tex'))
 
 
 ## Reproducibility ----
