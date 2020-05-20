@@ -15,6 +15,7 @@ $(out)/05_*.*: 05_cluster_analysis.R \
 			   $(data)/02_parsed.Rdata \
 			   $(data)/03_univ_net_stats.rds
 	Rscript 05_cluster_analysis.R
+	rm Rplots.pdf
 
 
 ## Regression model
