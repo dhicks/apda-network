@@ -4,9 +4,12 @@ library(ggdendro)
 library(cowplot)
 library(dendextend)
 library(viridis)
-library(xtable)
 
-theme_set(theme_bw())
+library(xtable)
+library(knitr)
+library(kableExtra)
+
+theme_set(theme_minimal())
 
 # Also needed: clusterSim. Not loading all of the package because it loads MASS and messes up select().
 set.seed(123)
@@ -121,23 +124,37 @@ cluster.complete <- agnes(x = distance.matrix, diss = TRUE, method = 'ward', met
 print(summary(cluster.complete)$ac) # Agglomerative coefficient of the method. 
 
 # Calculate mean Silhouette for each value of k between 2 and 100 and plot it
-all.silhouettes <- map_dfr(2:10, function(x){
-  sil <- cluster.complete %>%
-      as.hclust() %>% 
-      cutree(tree = ., k = x) %>%
-    silhouette(., distance.matrix) # returns the silhouette of each pair of neighbors in the cluster.
-  tibble(Mean.Sil = mean(sil[,3]), S.D.Sil = sd(sil[,3])) %>%
-    return()
-})
-all.silhouettes$k <- c(2:10)
-sil.plot <- ggplot(all.silhouettes[1:9,], aes(x = k, y = Mean.Sil, label = k)) +
-  geom_line() +
-  geom_label(size = 5) +
-  labs(x = "Number of clusters", y = "Silhouette") + 
-  theme_cowplot() + 
-  scale_x_continuous()
-sil.plot
-ggsave(str_c(output_path, "sil_plot.png"), height = 15, width = 25, unit ="cm")
+silhouette_k = function(k, clusters, distances) {
+  ## Coerce clusters to hclust, cut with k clusters, and calculate silhouette index
+  clusters %>% 
+    as.hclust() %>% 
+    cutree(k = k) %>% 
+    silhouette(distances) %>% 
+    as('matrix') %>% 
+    as_tibble()
+}
+
+all.silhouettes = 2:10 %>% 
+  set_names() %>% 
+  map_dfr(silhouette_k, cluster.complete, distance.matrix, 
+          .id = 'k') %>% 
+  mutate(k = as.integer(k))
+
+sil.plot = ggplot(all.silhouettes, 
+                  aes(x = k, y = sil_width, 
+                      label = k, 
+                      group = k)) +
+  stat_summary(fun = mean, 
+               geom = 'line', 
+               group = 1L) +
+  stat_summary(fun = mean, geom = 'label', size = 5) +
+  # ggbeeswarm::geom_beeswarm(alpha = .1)
+  labs(x = "Number of clusters", y = "Silhouette")
+# sil.plot
+ggsave(str_c(output_path, "sil_plot.png"), sil.plot, 
+       height = 15, width = 25, unit ="cm")
+ggsave(str_c(paper_path, 'fig_sil_plot.png'), sil.plot, 
+       height = 15, width = 25, unit = 'cm')
 
 # Plotting dendrograms and assessing determinants   ----
 
@@ -148,7 +165,7 @@ university.names <- complete.data$University.Name %>%
 university.names[is.na(university.names)] <- c("NA", "NA")
 labels(dendrogram) <- university.names[cluster.complete$order] # Order university labels and add them to dendrogram
 
-# k = 2
+# k = 2 ----
 # Get the mean z-score for each variable in each cluster to get traits of each cluster
 means.k.2 <- complete.data %>% 
   mutate(cluster = factor(cutree(dendrogram, k = 2))) %>%
@@ -194,10 +211,11 @@ k.2.plot <- dendrogram %>%
   set("branches_lwd", c(.8,.8,.8)) %>% 
   as.ggdend() %>% 
   ggplot(labels = FALSE)
-k.2.plot
-ggsave(str_c(output_path, "k_2.png"), height = 15, width = 25, unit ="cm")
+# k.2.plot
+ggsave(str_c(output_path, "k_2.png"), k.2.plot, 
+       height = 15, width = 25, unit ="cm")
 
-# k = 3
+# k = 3 ----
 
 means.k.3 <- complete.data %>% 
   mutate(cluster = factor(cutree(dendrogram, k = 3))) %>%
@@ -205,7 +223,7 @@ means.k.3 <- complete.data %>%
   group_by(cluster) %>% 
   summarise_if(is.numeric, mean) %>% 
   mutate(cluster = recode(cluster, `1` = "1", `2` = "3", `3` = "2")) # Recode from left to right
-  
+
 
 vars.k.3 <- complete.data %>% 
   mutate(cluster = factor(cutree(dendrogram, k = 3))) %>%
@@ -246,11 +264,11 @@ k.3.plot <- dendrogram %>%
   as.ggdend() %>% 
   ggplot(labels = FALSE)
 
-k.3.plot
+# k.3.plot
+ggsave(str_c(output_path, "k_3.png"), k.3.plot, 
+       height = 15, width = 25, unit ="cm")
 
-ggsave(str_c(output_path, "k_3.png"), height = 15, width = 25, unit ="cm")
-
-# k = 8
+# k = 8 ----
 
 means.k.8 <- complete.data %>% 
   mutate(cluster = factor(cutree(dendrogram, k = 8))) %>%
@@ -294,7 +312,41 @@ top.vars.k.8 <- vars.k.8 %>%
   gather("variable", "cv", African:`AOS Value (General)`) %>% 
   left_join(all.means.k.8) %>% 
   group_by() # %>% 
-  # mutate(cluster =  recode(cluster, `1` = "1", `2` = "2", `3` = "7", `4` = "8", `5` = "5", `6` = "6", `7` = "3", `8` = "4"))
+# mutate(cluster =  recode(cluster, `1` = "1", `2` = "2", `3` = "7", `4` = "8", `5` = "5", `6` = "6", `7` = "3", `8` = "4"))
+
+## Table showing the top and bottom 3 labels for each cluster in k=8
+k8_labels = list(bottom = {bottom.means.k.8 %>% 
+    group_by(cluster) %>% 
+    top_n(-3, mean)}, 
+    top = {top.means.k.8 %>% 
+        group_by(cluster) %>% 
+        top_n(3, mean)}) %>% 
+  bind_rows(.id = 'side') %>% 
+  ungroup() %>% 
+  mutate(side = fct_relevel(side, 'top', 'bottom'), 
+         cluster = as.character(cluster)) %>% 
+  arrange(cluster, side, mean) %>% 
+  select(cluster, side, variable, mean)
+
+k8_labels_styled = k8_labels %>% 
+  arrange(cluster, side, mean) %>% 
+  select(-cluster) %>% 
+  kable(col.names = c('Side', 'Trait', 'Z-score'),
+        digits = 2,
+        format = 'latex', 
+        longtable = TRUE,
+        booktabs = TRUE, 
+        # table.envir = 'sidewaystable',
+        label = 'k8.labels', 
+        caption = 'Positive and negative traits (AOS and keywords) for $k=8$ clusters. Side indicates whether traits come from the top or bottom of the z-scores for each cluster.') %>% 
+  kable_styling() %>% 
+  pack_rows(index=c('Cluster 1' = 6, 'Cluster 2' = 6, 
+                    'Cluster 3' = 6, 'Cluster 4' = 6, 
+                    'Cluster 5' = 6, 'Cluster 6' = 6, 
+                    'Cluster 7' = 6, 'Cluster 8' = 6))
+write_file(k8_labels_styled, path = str_c(output_path, 'k8_labels.tex'))
+write_file(k8_labels_styled, path = str_c(paper_path, 'tab_k8_labels.tex'))
+
 
 k.8.plot <- dendrogram %>% 
   color_labels(k = 8, col = plasma(8, end = .9)) %>% 
@@ -302,12 +354,20 @@ k.8.plot <- dendrogram %>%
   set("branches_lwd", c(.8,.8,.8)) %>% 
   as.ggdend() %>% 
   ggplot(labels = FALSE, nodes = TRUE) 
-k.8.plot
-ggsave(str_c(output_path, "k_8.png"), height = 15, width = 25, unit ="cm")
+# k.8.plot
+ggsave(str_c(output_path, "k_8.png"), k.8.plot, 
+       height = 15, width = 25, unit ="cm")
 
-plot_grid(k.2.plot, k.3.plot, k.8.plot, ncol = 1, labels = c("A", "B", "C"))
-ggsave(str_c(output_path, "cluster_panel.png"), height = 9, width = 6, unit ="in")
 
+## Combined dendograms ---
+cluster_panel = plot_grid(k.2.plot, k.3.plot, k.8.plot, ncol = 1, 
+                          labels = c("A", "B", "C"))
+ggsave(str_c(output_path, "cluster_panel.png"), cluster_panel, 
+       height = 9, width = 6, unit ="in")
+ggsave(str_c(paper_path, "fig_cluster_panel.png"), cluster_panel, 
+       height = 9, width = 6, unit ="in")
+
+## Labeled dendogram ----
 # Get all universities along with their clustering in each value of k
 # Note that the clusters in the paper do not have the same numbering as the clusters here;
 # for readability, I numbered the clusters in the paper from left to right instead of merging order.
@@ -324,13 +384,15 @@ university.and.cluster <- complete.data %>%
          k.8 = recode(k.8, `1` = "1", `2` = "3", `3` = "6",
                       `4` = "7", `5` = "8", 
                       `6` = "4", `7` = "2", `8` = "5"))
-dendrogram %>% 
+labeled_dendro = dendrogram %>% 
   color_labels(k = 8, col = plasma(8, end = .9)) %>% 
   color_branches(k = 8, col = plasma(8, end = .9)) %>% 
   set("branches_lwd", c(.8,.8,.8)) %>% 
   as.ggdend() %>% 
   ggplot(labels = TRUE, horiz = TRUE)
-ggsave(str_c(output_path, "dendrogram_and_labels.pdf"), width = 20, height = 30)
+# labeled_dendro
+ggsave(str_c(output_path, "dendrogram_and_labels.pdf"), 
+       labeled_dendro, width = 20, height = 30)
 
 
 ## Output ----

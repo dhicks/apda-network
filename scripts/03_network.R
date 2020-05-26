@@ -480,11 +480,11 @@ univ_df %>%
 #' High-prestige universities
 #' --------------------
 ## high-prestige universities ----
-## Start w/ Oxford, and work upstream
+## Start w/ NYU, and work upstream
 ## Only need to go 11 or 12 steps to get closure
 1:25 %>%
     map(~ make_ego_graph(hiring_network, order = .x, 
-                         nodes = '512', mode = 'in')) %>%
+                         nodes = '34', mode = 'in')) %>%
     flatten() %>%
     map(~ length(V(.x))) %>%
     tibble(order = 1:length(.), 
@@ -492,7 +492,7 @@ univ_df %>%
     ggplot(aes(order, size)) + geom_point()
 
 prestigious = make_ego_graph(hiring_network, order = 12, 
-                             nodes = '512', 
+                             nodes = '34', 
                              mode = 'in') %>%
     .[[1]] %>%
     as_tbl_graph()
@@ -510,11 +510,11 @@ length(E(prestigious)) / length(E(hiring_network))
 length(E(prestigious)) / nrow(individual_df)
 
 # layout_prestigious = layout_with_focus(prestigious, 
-#                                        which(V(prestigious)$univ_name == 'University of Oxford')) %>% 
+#                                        which(V(prestigious)$univ_name == 'New York University')) %>% 
 #     `colnames<-`(c('x', 'y')) %>% 
 #     as_tibble()
 layout_prestigious = create_layout(prestigious, 'focus', 
-                                   focus = which(V(prestigious)$univ_name == 'University of Oxford'))
+                                   focus = which(V(prestigious)$univ_name == 'New York University'))
 
 # png(file = '02_prestigious_net.png', 
 #     width = 11, height = 11, units = 'in', res = 400)
