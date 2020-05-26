@@ -27,10 +27,11 @@ dist_matrix = read_rds(str_c(data_folder, '01_dist_matrix.Rds'))
 
 ## Cluster x gender ----
 cluster_gender = univ_df %>% 
-    filter(!is.na(frac_w)) %>% 
-    ggplot(aes(cluster, frac_w, color = cluster)) +
-    geom_beeswarm() +
-    stat_summary(geom = 'crossbar',
+    filter(!is.na(frac_w), !(cluster == 'missing')) %>% 
+    ggplot(aes(cluster, frac_w, fill = cluster)) +
+    geom_beeswarm(shape = 21) +
+    stat_summary(aes(color = cluster), 
+                 geom = 'crossbar',
                  fun = 'median', 
                  fun.max = 'median', 
                  fun.min = 'median') +
@@ -39,6 +40,11 @@ cluster_gender = univ_df %>%
     scale_y_continuous(labels = scales::percent_format(), 
                        name = 'Share of graduates women') +
     scale_color_viridis_d(option = 'C',
+                         # scale_color_brewer(palette = 'RdYlBu',
+                         name = 'cluster', 
+                         direction = 1,
+                         guide = FALSE) +
+    scale_fill_viridis_d(option = 'C',
                           # scale_color_brewer(palette = 'RdYlBu',
                           name = 'cluster', 
                           direction = 1,
