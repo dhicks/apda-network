@@ -29,7 +29,8 @@ dist_matrix = read_rds(str_c(data_folder, '01_dist_matrix.Rds'))
 cluster_gender = univ_df %>% 
     filter(!is.na(frac_w), !(cluster == 'missing')) %>% 
     ggplot(aes(cluster, frac_w, fill = cluster)) +
-    geom_beeswarm(shape = 21) +
+    geom_beeswarm(shape = 21, size = 2, cex = 4, 
+                  alpha = .5) +
     stat_summary(aes(color = cluster), 
                  geom = 'crossbar',
                  fun = 'median', 
@@ -48,12 +49,13 @@ cluster_gender = univ_df %>%
                           # scale_color_brewer(palette = 'RdYlBu',
                           name = 'cluster', 
                           direction = 1,
-                          guide = FALSE)
+                          guide = FALSE) +
+    coord_cartesian(clip = 'off')
 cluster_gender
 ggsave(str_c(output_folder, 'cluster_gender.png'), 
-       width = 6, height = 6)
+       width = 3, height = 4)
 ggsave(str_c(paper_folder, 'fig_cluster_gender.png'), 
-       width = 6, height = 6)
+       width = 3, height = 4)
 
 
 ## Cluster MDS visualization ----

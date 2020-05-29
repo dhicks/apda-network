@@ -405,13 +405,26 @@ cluster_table = university.and.cluster %>%
   mutate_at(vars(starts_with('k')), as.character) %>% 
   select("Name" = University.Name, `K = 2` = k.2, `K = 3` = k.3, `K = 8` = k.8) %>% 
   arrange(`K = 2`, `K = 3`, `K = 8`, Name) %>% 
-  xtable(type = 'latex')
-print.xtable(cluster_table, tabular.environment = 'longtable',
-             floating = FALSE,
-             file = str_c(output_path, 'university_and_cluster.tex'))
-print.xtable(cluster_table, tabular.environment = 'longtable',
-             floating = FALSE,
-             file = str_c(paper_path, 'tab_university_and_cluster.tex'))
+  # xtable(type = 'latex', 
+  #        caption = 'Programs and clusters.  Programs are listed alphabetically within their $k=8$ cluster.', 
+  #        label = 'tab:university_cluster')
+  kable(format = 'latex', 
+        longtable = TRUE, 
+        booktabs = TRUE, 
+        label = 'university.cluster', 
+        caption = 'Programs and clusters.  Programs are listed alphabetically within their $k=8$ cluster.')
+  
+# print.xtable(cluster_table, tabular.environment = 'longtable',
+#              floating = FALSE,
+#              file = str_c(output_path, 'university_and_cluster.tex'))
+# print.xtable(cluster_table, tabular.environment = 'longtable',
+#              floating = FALSE,
+#              file = str_c(paper_path, 'tab_university_and_cluster.tex'))
+
+write_file(cluster_table, 
+           path = str_c(plots_path, 'university_and_cluster.tex'))
+write_file(cluster_table, 
+           path = str_c(paper_folder, 'tab_university_and_cluster.tex'))
 
 ## Pairwise distance matrix (used in 05 for MDS)
 write_rds(distance.matrix, str_c(data_folder, '01_dist_matrix.Rds'))

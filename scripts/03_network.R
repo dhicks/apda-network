@@ -561,15 +561,15 @@ high_prestige_tab = univ_df %>%
     # arrange(desc(out_centrality)) %>% view()
     arrange(univ_name) %>% 
     mutate(perm_placement_rate = scales::percent_format(accuracy = 2)(perm_placement_rate)) %>% 
-    knitr::kable(col.names = c('university', 'cluster', 
-                               'placement rate',
-                               'country'),
+    knitr::kable(col.names = c('Program', 'Cluster', 
+                               'Placement Rate',
+                               'Country'),
                  format = 'latex', 
                  longtable = TRUE,
                  booktabs = TRUE, 
                  # table.envir = 'sidewaystable',
                  label = 'high.prestige', 
-                 caption = 'High-prestige universities/programs, in alphabetical order.  Placement rate refers to placements in permanent academic positions, out of all graduates.')
+                 caption = 'High-prestige programs, in alphabetical order.  Placement rate refers to placements in permanent academic positions, out of all graduates.')
 
 write_file(high_prestige_tab, path = str_c(plots_path, 'high_prestige.tex'))
 write_file(high_prestige_tab, path = str_c(paper_folder, 'tab_high_prestige.tex'))
