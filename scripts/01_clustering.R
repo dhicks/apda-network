@@ -424,7 +424,7 @@ cluster_table = university.and.cluster %>%
 write_file(cluster_table, 
            path = str_c(output_path, 'university_and_cluster.tex'))
 write_file(cluster_table, 
-           path = str_c(paper_folder, 'tab_university_and_cluster.tex'))
+           path = str_c(paper_path, 'tab_university_and_cluster.tex'))
 
 ## Pairwise distance matrix (used in 05 for MDS)
 write_rds(distance.matrix, str_c(data_folder, '01_dist_matrix.Rds'))
