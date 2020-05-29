@@ -422,7 +422,7 @@ cluster_table = university.and.cluster %>%
 #              file = str_c(paper_path, 'tab_university_and_cluster.tex'))
 
 write_file(cluster_table, 
-           path = str_c(plots_path, 'university_and_cluster.tex'))
+           path = str_c(output_path, 'university_and_cluster.tex'))
 write_file(cluster_table, 
            path = str_c(paper_folder, 'tab_university_and_cluster.tex'))
 
