@@ -361,7 +361,7 @@ ggsave(str_c(output_path, "k_8.png"), k.8.plot,
 
 ## Combined dendograms ---
 cluster_panel = plot_grid(k.2.plot, k.3.plot, k.8.plot, ncol = 1, 
-                          labels = c("A", "B", "C"))
+                          labels = 'auto')
 ggsave(str_c(output_path, "cluster_panel.png"), cluster_panel, 
        height = 9, width = 6, unit ="in")
 ggsave(str_c(paper_path, "fig_cluster_panel.png"), cluster_panel, 

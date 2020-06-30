@@ -138,7 +138,7 @@ cluster_prestige_prop
 
 plot_grid(cluster_prestige_count, cluster_prestige_prop, 
           rel_widths = c(1.3, 1),
-          labels = 'AUTO')
+          labels = 'auto')
 
 ggsave(str_c(output_folder, 'cluster_vs_prestige.png'), 
        width = 8, height = 4)
@@ -266,7 +266,7 @@ all_bar = cluster_flows_df %>%
     
 plot_grid(alluvial_plot, hiring_bar, all_bar, 
           nrow = 1, rel_widths = c(1, 1, .3), 
-          labels = 'AUTO')
+          labels = 'auto')
 
 ggsave(str_c(output_folder, 'cluster_flow_composite.png'), 
        width = 8, height = 4, scale = 2)
