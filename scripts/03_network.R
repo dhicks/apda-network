@@ -37,9 +37,18 @@ paper_folder = '../paper/'
 ## Load data ----
 load(str_c(data_folder, '02_parsed.Rdata'))
 
+nrow(individual_df)
+
 individual_df %>% 
     filter(permanent) %>% 
     nrow()
+
+individual_df %>% 
+    filter(permanent) %>% 
+    nrow() %>% 
+    {./nrow(individual_df)}
+
+
 
 #' There are 203 PhD programs producing graduate students in the data
 univ_df %>%
