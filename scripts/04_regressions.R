@@ -16,7 +16,7 @@ library(rstanarm)
 ## <https://github.com/rstudio/rstudio/issues/6692>
 # options(mc.cores = min(4, 
 #                        parallel::detectCores() - 2))
-# options(mc.cores = 4)
+options(mc.cores = 4)
 ## bayesplot makes itself the default theme
 theme_set(theme_minimal())
 
@@ -276,7 +276,7 @@ pp_check(model, nreps = 200, plotfun = 'ppc_rootogram',
 
 
 #+ Posterior estimates for coefficients ----
-## 90% centered posterior intervals
+## 90% HPD posterior intervals
 estimates = posterior_estimates(model, prob = .9)
 
 ## Estimates plot
@@ -288,7 +288,7 @@ estimates %>%
     ## posterior_estimates() already exponentiates estimates
     mutate_if(is.numeric, ~ . - 1) %>% 
     ggplot(aes(x = level, y = estimate, 
-           ymin = lower, ymax = upper, 
+           ymin = conf.low, ymax = conf.high, 
            color = group)) +
     geom_hline(yintercept = 0, linetype = 'dashed') +
     geom_pointrange(size = 1.5, fatten = 1.5) + 
@@ -311,7 +311,7 @@ estimates %>%
     filter(entity != 'intercept', 
            group != 'community',
            group != 'placement_year') %>% 
-    select(group, level, estimate, lower, upper) %>% 
+    select(group, level, estimate, conf.low, conf.high) %>% 
     mutate_if(is.factor, as.character) %>% 
     arrange(group, level) %>% 
     knitr::kable(format = 'latex', 
@@ -332,10 +332,8 @@ marginals = function (dataf, model, variable,
     all_0 = mutate(dataf, !!variable := ref_value)
     all_1 = mutate(dataf, !!variable := alt_value)
     
-    pred_0 = posterior_linpred(model, newdata = all_0, 
-                               transform = TRUE)
-    pred_1 = posterior_linpred(model, newdata = all_1, 
-                               transform = TRUE)
+    pred_0 = posterior_epred(model, newdata = all_0)
+    pred_1 = posterior_epred(model, newdata = all_1)
     
     marginal_effect = pred_1 - pred_0
     return(marginal_effect)

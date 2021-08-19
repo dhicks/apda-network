@@ -1,9 +1,15 @@
 ## Extract effects estimates, w/ nice orderings on variables for plotting
 posterior_estimates = function(model, prob = .9) {
-    fixed = tidy(model, parameters = 'non-varying', intervals = TRUE, 
-                 prob = prob)
-    varying = tidy(model, parameters = 'varying', intervals = TRUE, 
-                   prob = prob)
+    fixed = broom.mixed:::tidy.stanreg(model, 
+                                       effects = 'fixed',
+                                       conf.int = TRUE,
+                                       conf.level = prob, 
+                                       conf.method = 'HPDinterval')
+    varying = broom.mixed:::tidy.stanreg(model, 
+                                         effects = 'ran_vals',
+                                         conf.int = TRUE, 
+                                         conf.level = prob, 
+                                         conf.method = 'HPDinterval')
     
     combined = suppressWarnings(bind_rows(fixed, varying))
     
@@ -48,7 +54,7 @@ posterior_estimates = function(model, prob = .9) {
                level = case_when(str_detect(group, 'cluster') ~ paste('cluster', level), 
                                  group == 'community' ~ paste('community', level), 
                                  TRUE ~ level)
-               ) %>% 
+        ) %>% 
         ## Arrange x-axis
         arrange(entity, group, estimate) %>% 
         mutate(group = fct_inorder(group), 

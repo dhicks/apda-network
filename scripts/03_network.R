@@ -1,3 +1,4 @@
+TODO: can't use Boston College in example of "counterfactual high prestige"
 #' ---
 #' output:
 #'     html_document: 

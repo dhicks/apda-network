@@ -2,14 +2,14 @@
 ## Setup --------------------
 library(tidyverse)
 library(assertthat)
+library(tidylog)
 
 data_folder = '../data/'
 
 individual_df_raw = read_csv(str_c(data_folder, 
-                                   '00_query_result_2018-11-09.csv'), 
+                                   '00_PaperDataAPDA_2021-08-18.csv'), 
                              na = c('', 'NULL'), 
-                             col_names = c('person_id',
-                                           'gender', 
+                             col_names = c('gender', 
                                            'ethnicity', 
                                            'race',
                                            'aos_category',
@@ -18,10 +18,10 @@ individual_df_raw = read_csv(str_c(data_folder,
                                            'placing_univ_id',
                                            'placing_univ',
                                            'placement_year',
-                                           'hiring_univ_id', 
                                            'hiring_univ', 
+                                           'hiring_univ_id', 
                                            'position_type'), 
-                             col_types = str_dup('c', 13),
+                             col_types = str_dup('c', 12),
                              skip = 1)
 
 ## Missingness codes are 4 for ethnicity and 7 for race
@@ -118,20 +118,28 @@ count(individual_df_unfltd, placing_univ_id == '0')
 count(individual_df_unfltd, placing_univ_id == '10000')
 # individual_df_unfltd %>% filter(placing_univ_id == '10000') %>% View
 
-## No 10000s in hiring_univ_id, but some NAs
+## Some 10000s in hiring_univ_id, but some NAs
 count(individual_df_unfltd, hiring_univ_id == '10000')
 
+## Only have good data for 2012-2018
+## Hard to tell if 2019 is part of the downward trend
+ggplot(individual_df_unfltd, aes(graduation_year)) +
+    geom_bar() +
+    xlim(2000, NA)
+
 individual_df = individual_df_unfltd %>%
-    filter(## Remove error code university IDs
-        placing_univ_id != '0', placing_univ_id != '10000',
-        !(hiring_univ_id %in% c('0', '10000')),
-        !is.na(placing_univ_id), !is.na(placing_univ), 
-        !is.na(hiring_univ_id), !is.na(hiring_univ), 
-        ## Only have good data for 2012-2016
-        ## Still have about half as many 2017 grads as 2012-2016 average
-        graduation_year >= 2012, graduation_year <= 2016, 
-        placement_year >= 2012
-    )
+    ## Remove error code university IDs
+    filter(placing_univ_id != '0', placing_univ_id != '10000',
+           !(hiring_univ_id %in% c('0', '10000')),
+           !is.na(placing_univ_id), !is.na(placing_univ),
+           !is.na(hiring_univ_id), !is.na(hiring_univ)) %>% 
+    ## Filter down to cohorts with reliable data
+    filter(graduation_year >= 2012, graduation_year <= 2019, 
+           placement_year >= 2012) %>% 
+    ## Remove duplicates
+    filter(!duplicated(.)) %>% 
+    mutate(person_id = row_number()) %>% 
+    select(person_id, everything())
 
 
 ## University-level data --------------------
@@ -190,7 +198,7 @@ univ_df %>%
     `!`() %>% 
     any() %>% 
     assert_that(msg = 'All cluster labels are NA')
-    
+
 
 ## Placement totals, rates, and cumulative distributions
 ## These *do* include non-academic placements, which *do not* count as permanent
