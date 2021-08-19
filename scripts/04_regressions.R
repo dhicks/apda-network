@@ -29,8 +29,17 @@ knitr::opts_chunk$set(message = FALSE)
 source('../R/predictions.R')
 source('../R/posterior_estimates.R')
 
-## set to TRUE to force resampling the regression model
-force_resampling = FALSE
+## Use command-line argument to check whether to force resampling
+library(argparse)
+parser = ArgumentParser()
+parser$add_argument("-f", "--force", 
+                    action="store_true", 
+                    default=FALSE,
+                    help="Force resampling the regression model")
+args = parser$parse_args()
+force_resampling = args$force
+## Or uncomment the next line
+# force_resampling = TRUE
 
 #+ load_data -----
 data_folder = '../data/'

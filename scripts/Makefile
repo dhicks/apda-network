@@ -10,7 +10,7 @@ clean:
 
 ## Additional analysis of clusters
 clanalysis: $(wildcard $(out)/05_*.*)
-$(out)/05_*.*: 05_cluster_analysis.R \
+$(out)/05_*.* &: 05_cluster_analysis.R \
 			   $(data)/01_dist_matrix.Rds \
 			   $(data)/02_parsed.Rdata \
 			   $(data)/03_univ_net_stats.rds
@@ -20,13 +20,17 @@ $(out)/05_*.*: 05_cluster_analysis.R \
 
 ## Regression model
 regression: $(wildcard $(out)/04_*.*)
-$(out)/04_*.*: 04_regressions.R \
+$(out)/04_*.* &: 04_regressions.R \
 			   $(data)/04_model.Rds \
 			   $(R)/predictions.R \
 			   $(R)/posterior_estimates.R \
 			   $(data)/02_parsed.Rdata \
 			   $(data)/03_univ_net_stats.Rds
 	Rscript -e "rmarkdown::render('04_regressions.R')"
+	
+## Force resampling the model (don't use cache)
+force: 
+	Rscript 04_regressions.R --force
 
 
 ## Construct and analyze the hiring network
@@ -51,7 +55,7 @@ $(data)/02_parsed.Rdata: 02_parse.R \
 
 ## Construct clusters
 cluster: $(wildcard $(data)/01_*.*)
-$(data)/01_*.* $(out)/01_*.png: 01_clustering.R \
+$(data)/01_*.* $(out)/01_*.png &: 01_clustering.R \
 				 $(data)/00_AosCorrespondenceTable.csv \
 				 $(data)/00_newGradData_2018-12-11.csv \
 				 $(data)/00_newSurveyData_2018-12-11.csv
