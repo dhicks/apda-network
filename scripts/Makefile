@@ -7,6 +7,11 @@ all: cluster parse net regression clanalysis
 ## Clean the cached regression model
 clean:
 	rm $(data)/04_model.Rds
+## Force resampling the model
+force: clean
+	Rscript 04_regressions.R --force
+	rm Rplots.pdf
+
 
 ## Additional analysis of clusters
 clanalysis: $(wildcard $(out)/05_*.*)
@@ -26,11 +31,6 @@ $(out)/04_*.* &: 04_regressions.R \
 			   $(data)/02_parsed.Rdata \
 			   $(data)/03_univ_net_stats.Rds
 	Rscript -e "rmarkdown::render('04_regressions.R')"
-	
-## Force resampling the model (don't use cache)
-force: 
-	Rscript 04_regressions.R --force
-
 
 ## Construct and analyze the hiring network
 net: $(data)/03_univ_net_stats.rds
