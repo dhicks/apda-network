@@ -14,8 +14,7 @@ $(out)/05_*.* &: 05_cluster_analysis.R \
 			   $(data)/01_dist_matrix.Rds \
 			   $(data)/02_parsed.Rdata \
 			   $(data)/03_univ_net_stats.rds
-	Rscript 05_cluster_analysis.R
-	rm Rplots.pdf
+	Rscript -e "rmarkdown::render('05_cluster_analysis.R')"
 
 
 ## Regression model
@@ -46,8 +45,7 @@ $(data)/03_univ_net_stats.rds: 03_network.R \
 ## Parse the data used in the network and regression analyses
 parse: $(data)/02_parsed.Rdata
 $(data)/02_parsed.Rdata: 02_parse.R \
-
-						 $(data)/00_query_result_2018-11-09.csv \
+						 $(data)/00_PaperDataAPDA_2021-08-18.csv \
 						 $(data)/00_university_table_2018-11-09.csv \
 						 $(data)/01_university_and_cluster.Rds
 	Rscript -e "rmarkdown::render('02_parse.R')"
@@ -56,7 +54,6 @@ $(data)/02_parsed.Rdata: 02_parse.R \
 ## Construct clusters
 cluster: $(wildcard $(data)/01_*.*)
 $(data)/01_*.* $(out)/01_*.png &: 01_clustering.R \
-				 $(data)/00_AosCorrespondenceTable.csv \
-				 $(data)/00_newGradData_2018-12-11.csv \
-				 $(data)/00_newSurveyData_2018-12-11.csv
+				 $(data)/00_PaperDataAPDA_2021-08-18.csv \
+				 $(data)/00_AOSDatax_2021-08-19.xlsx
 	Rscript -e "rmarkdown::render('01_clustering.R')"

@@ -64,7 +64,7 @@ mds = dist_matrix %>%
              list. = TRUE) %>% 
     .$points %>% 
     as_tibble() %>% 
-    mutate(univ_id = labels(dist_matrix))
+    mutate(univ_name = labels(dist_matrix))
 
 # isomds = dist_matrix %>% 
 #     MASS::isoMDS() %>% 

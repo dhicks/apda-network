@@ -1,5 +1,7 @@
 library(cluster)
 library(tidyverse)
+library(tidylog)
+library(readxl)
 library(ggdendro)
 library(cowplot)
 library(dendextend)
@@ -8,6 +10,10 @@ library(viridis)
 library(xtable)
 library(knitr)
 library(kableExtra)
+
+library(assertthat)
+
+source(file.path('..', 'R', 'process_dendro.R'))
 
 theme_set(theme_minimal())
 
@@ -21,25 +27,43 @@ paper_path = str_c('../paper/')
 
 # Process graduates -----
 
-# Load the table that links grad AOS code with the name of the area.
-AOScorrespondence = read_csv(file = str_c(data_folder, "00_AosCorrespondenceTable.csv"), 
-                             col_names = c("Code", "Name")) %>% 
-  mutate_all(factor)
+# Table that links grad AOS code with the name of the area.
+AOScorrespondence = read_excel(path = file.path(data_folder, 
+                                                '00_AOSDatax_2021-08-19.xlsx'), 
+                               sheet = 'Key')
+
+# Table that links university IDs and names
+university_id_name = read_csv(file.path(data_folder, 
+                                        '00_PaperDataAPDA_2021-08-18.csv')) %>% 
+  select(University.ID = `grad uni`, 
+         University.Name = `uni name`) %>% 
+  distinct(University.ID, University.Name)
 
 # Load University x Number of Grads per AOS area data
-grads <- read_csv(file = str_c(data_folder, "00_newGradData_2018-12-11.csv")) %>% 
-  select(-Unknown) %>% 
-  mutate(UniversityID = factor(UniversityID)) %>% 
-  rename(University.ID = UniversityID)
 
-# 283 universites with AOS area data, before filtering
+grads <- read_excel(path = file.path(data_folder, 
+                                     '00_AOSDatax_2021-08-19.xlsx'), 
+                    sheet = 'AOSData') %>% 
+  select(University.ID = `Grad Uni`, 
+         aos_code = AOS) %>% 
+  left_join(AOScorrespondence, by = c('aos_code' = 'ID')) %>% 
+  select(-aos_code) %>% 
+  count(University.ID, AOS) %>% 
+  mutate(AOS = str_c('AOS ', AOS), 
+         University.ID = as.character(University.ID)) %>% 
+  pivot_wider(names_from = AOS, 
+              values_from = n, 
+              values_fill = 0L)
+
+# 196 universites with AOS area data, before filtering
 nrow(grads)
 
 # Remove programs with fewer than 5 grads
 # Then, remove AoS areas with fewer than 7 people total (%5 of the number of programs).
 grads <- grads %>%
   filter(rowSums(select(., -University.ID)) > 4) %>% 
-  select(University.ID, names(which(colSums(select(., -University.ID)) > 7)))
+  select(University.ID, 
+         names(which(colSums(select(., -University.ID)) > 7)))
 
 previousAoA <- colnames(grads)
 
@@ -60,28 +84,44 @@ grads <- grads %>%
 # Process keywords ----
 
 # Load survey data as University x Keyword occurrence count
-keywords <- read_csv(file = str_c(data_folder, "00_newSurveyData_2018-12-11.csv")) %>% 
-  rename(University.ID = `University ID`, University.Name = `University Name`) %>% 
-  mutate(University.Name = factor(University.Name), University.ID = factor(University.ID)) 
+keyword_resp_count = read_excel(path = file.path(data_folder, 
+                                                 '00_AOSDatax_2021-08-19.xlsx'), 
+                                sheet = 'AOSData') %>% 
+  rename(University.ID = `Grad Uni`) %>% 
+  mutate(University.ID = as.character(University.ID)) %>% 
+  count(University.ID, name = 'total_resp')
+
+keywords <- read_excel(path = file.path(data_folder, 
+                                        '00_AOSDatax_2021-08-19.xlsx'), 
+                       sheet = 'Keyword') %>% 
+  slice(-1) %>% 
+  rename(University.ID = `Grad Uni/Keyword`) 
 
 # 170 programs with keyword data, before filtering etc.
 nrow(keywords)
 
-keyword.universities <- select(keywords, University.ID, University.Name) # Save before scaling
+keyword.universities <- unique(keywords$University.ID) # Save before scaling
 
-keywords <- keywords %>%
-  select(-University.ID, -University.Name) %>%  # remove to scale (non-numeric)
-  select(which(colSums(.) > 8)) %>%  # Filter keywords in less than 5% of the programs
-  t() %>%
-  scale(center = F, scale = colSums(., na.rm = T)) %>%
-  t() %>%
-  as_tibble %>%
-  bind_cols(keyword.universities) %>% 
-  select(University.ID, University.Name, everything())
+keywords_to_drop = keywords %>% 
+  pivot_longer(-University.ID, names_to = 'aos', values_to = 'value') %>% 
+  filter(value != 0) %>% 
+  count(aos) %>% 
+  mutate(share = n / length(keyword.universities)) %>% 
+  filter(share < .05)
+keywords_to_drop
+
+keywords.scaled = keywords %>%
+  pivot_longer(-University.ID, names_to = 'aos', values_to = 'responses') %>% 
+  filter(responses != 0L) %>% 
+  anti_join(keywords_to_drop, by = 'aos') %>% 
+  inner_join(keyword_resp_count, by = 'University.ID') %>% 
+  mutate(share = responses / total_resp) %>% 
+  select(University.ID, aos, share) %>% 
+  pivot_wider(names_from = aos, values_from = share, values_fill = 0)
 
 # Join both data sources into one frame
 # As we're going to keep only universities with data on both sources, we can do a left join.
-all.data <- left_join(keywords, grads, by = c("University.ID")) 
+all.data <- inner_join(keywords.scaled, grads, by = c("University.ID")) 
 
 # Determine which rows don't have complete data 
 # can't use complete.cases because I don't want to eliminate universities with names I don't know
@@ -89,14 +129,18 @@ rows.with.NA <- all.data[, 3:ncol(all.data)] %>%
   rowSums() %>% 
   is.na() 
 
+## Assert that no rows have missing data
+assert_that(!any(rows.with.NA))
+
 # Compute distances ----
 
 complete.data <- all.data %>% 
-  filter(!(rows.with.NA)) %>% 
-  filter(University.ID != "10000") 
+  filter(University.ID != "10000") %>% 
+  left_join(university_id_name, by = 'University.ID') %>% 
+  select(University.ID, University.Name, everything())
 
 raw.matrix <- complete.data %>% 
-  column_to_rownames('University.ID') %>%
+  column_to_rownames('University.Name') %>%
   select(-contains("University")) %>% 
   t() %>%
   cor(method = "pearson")
@@ -105,7 +149,7 @@ raw.matrix <- 1 - raw.matrix
 
 raw.matrix <- as.dist(raw.matrix)
 
-## assert_that(!is.null(attr(raw.matrix, 'Labels')))
+assert_that(!is.null(attr(raw.matrix, 'Labels')))
 
 # # Compute a pairwise distance matrix using "correlation" distance (1 - corr(x, y))
 # distance.matrix <- complete.data %>% 
@@ -150,7 +194,7 @@ sil.plot = ggplot(all.silhouettes,
   stat_summary(fun = mean, geom = 'label', size = 5) +
   # ggbeeswarm::geom_beeswarm(alpha = .1)
   labs(x = "Number of clusters", y = "Silhouette")
-# sil.plot
+sil.plot
 ggsave(str_c(output_path, "sil_plot.png"), sil.plot, 
        height = 15, width = 25, unit ="cm")
 ggsave(str_c(paper_path, 'fig_sil_plot.png'), sil.plot, 
@@ -160,160 +204,46 @@ ggsave(str_c(paper_path, 'fig_sil_plot.png'), sil.plot,
 
 # Allocate dendrogram
 dendrogram <- as.dendrogram(cluster.complete)
-university.names <- complete.data$University.Name %>%
-  as.character()
-university.names[is.na(university.names)] <- c("NA", "NA")
-labels(dendrogram) <- university.names[cluster.complete$order] # Order university labels and add them to dendrogram
+# university.names <- complete.data$University.Name %>%
+#   as.character()
+# university.names[is.na(university.names)] <- c("NA", "NA")
+# labels(dendrogram) <- university.names[cluster.complete$order] # Order university labels and add them to dendrogram
 
 # k = 2 ----
-# Get the mean z-score for each variable in each cluster to get traits of each cluster
-means.k.2 <- complete.data %>% 
-  mutate(cluster = factor(cutree(dendrogram, k = 2))) %>%
-  mutate_if(is.numeric, scale) %>%
-  group_by(cluster) %>% 
-  summarise_if(is.numeric, mean)
-
-vars.k.2 <- complete.data %>% 
-  mutate(cluster = factor(cutree(dendrogram, k = 2))) %>%
-  mutate_if(is.numeric, scale) %>%
-  group_by(cluster) %>% 
-  summarise_if(is.numeric, sd)
-
-# Get the top 10 mean z-score variables per cluster
-
-all.means.k.2 <- means.k.2 %>% 
-  gather("variable", "mean", African:`AOS Value (General)`) 
-top.means.k.2 <- all.means.k.2 %>% 
-  group_by(cluster) %>% 
-  top_n(5, mean) %>% 
-  arrange(cluster, desc(mean))
-
-# Get the bottom 10 mean z-score variables per cluster
-bottom.means.k.2 <- all.means.k.2 %>% 
-  group_by(cluster) %>% 
-  top_n(-5, mean) %>% 
-  arrange(cluster, mean)
-top.vars.k.2 <- vars.k.2 %>% 
-  gather("variable", "cv", African:`AOS Value (General)`) %>% 
-  group_by(cluster) %>%
-  left_join(all.means.k.2)
+k2 = quietly(process_dendro)(complete.data, dendrogram, 2)$result
 
 # How many programs per cluster
-complete.data %>% 
-  mutate(cluster = factor(cutree(dendrogram, k = 2))) %>% 
-  group_by(cluster) %>% 
-  tally()
+count(k2$cut_tree, cluster)
 
-# Plot and save dendrogram with color marking different clusters
-k.2.plot <- dendrogram %>% 
-  color_labels(k = 2, col = plasma(4, end = .9)) %>% 
-  color_branches(k = 2, col = plasma(4, end = .9)) %>% 
-  set("branches_lwd", c(.8,.8,.8)) %>% 
-  as.ggdend() %>% 
-  ggplot(labels = FALSE)
-# k.2.plot
-ggsave(str_c(output_path, "k_2.png"), k.2.plot, 
+# Plot and save dendrogram
+k2$plot
+ggsave(str_c(output_path, "k_2.png"), k2$plot, 
        height = 15, width = 25, unit ="cm")
 
 # k = 3 ----
+k3 = quietly(process_dendro)(complete.data, dendrogram, 3)$result
 
-means.k.3 <- complete.data %>% 
-  mutate(cluster = factor(cutree(dendrogram, k = 3))) %>%
-  mutate_if(is.numeric, scale) %>%
-  group_by(cluster) %>% 
-  summarise_if(is.numeric, mean) %>% 
-  mutate(cluster = recode(cluster, `1` = "1", `2` = "3", `3` = "2")) # Recode from left to right
+# How many programs per cluster
+count(k3$cut_tree, cluster)
 
-
-vars.k.3 <- complete.data %>% 
-  mutate(cluster = factor(cutree(dendrogram, k = 3))) %>%
-  mutate_if(is.numeric, scale) %>%
-  group_by(cluster) %>% 
-  summarise_if(is.numeric, sd) %>% 
-  mutate(cluster = recode(cluster, `1` = "1", `2` = "3", `3` = "2")) # Recode from left to right
-
-complete.data %>% 
-  mutate(cluster = factor(cutree(dendrogram, k = 3))) %>% 
-  mutate(cluster = recode(cluster, `1` = "1", `2` = "3", `3` = "2")) %>% # Recode from left to right
-  group_by(cluster) %>% 
-  tally()
-
-# Get the top 10 mean z-score variables per cluster
-
-all.means.k.3 <- means.k.3 %>% 
-  gather("variable", "mean", African:`AOS Value (General)`)
-top.means.k.3 <- all.means.k.3 %>% 
-  group_by(cluster) %>% 
-  top_n(5, mean) %>% 
-  arrange(cluster, desc(mean)) 
-
-# Get the bottom 10 mean z-score variables per cluster
-bottom.means.k.3 <- all.means.k.3 %>% 
-  group_by(cluster) %>% 
-  top_n(-5, mean) %>% 
-  arrange(cluster, mean)
-top.vars.k.3 <- vars.k.3 %>% 
-  gather("variable", "cv", African:`AOS Value (General)`) %>% 
-  group_by(cluster) %>%
-  left_join(all.means.k.3)
-
-k.3.plot <- dendrogram %>% 
-  color_labels(k = 3, col = plasma(3, end = .9)) %>% 
-  color_branches(k = 3, col = plasma(3, end = .9)) %>% 
-  set("branches_lwd", c(.8,.8,.8)) %>% 
-  as.ggdend() %>% 
-  ggplot(labels = FALSE)
-
-# k.3.plot
-ggsave(str_c(output_path, "k_3.png"), k.3.plot, 
+# Plot and save dendrogram
+k3$plot
+ggsave(str_c(output_path, "k_3.png"), k3$plot, 
        height = 15, width = 25, unit ="cm")
 
-# k = 8 ----
+# k = 6 ----
+k6 = quietly(process_dendro)(complete.data, dendrogram, 6)$result
 
-means.k.8 <- complete.data %>% 
-  mutate(cluster = factor(cutree(dendrogram, k = 8))) %>%
-  mutate_if(is.numeric, scale) %>%
-  group_by(cluster) %>% 
-  summarise_if(is.numeric, mean) %>% 
-  mutate(cluster = recode(cluster, `1` = "1", `2` = "3", `3` = "6",
-                          `4` = "7", `5` = "8", `6` = "4", `7` = "2", `8` = "5")) # Recode from left to right
+# How many programs per cluster
+count(k6$cut_tree, cluster)
 
-vars.k.8 <- complete.data %>% 
-  mutate(cluster = factor(cutree(dendrogram, k = 8))) %>%
-  mutate_if(is.numeric, scale) %>%
-  group_by(cluster) %>% 
-  summarise_if(is.numeric, sd) %>% 
-  mutate(cluster = recode(cluster, `1` = "1", `2` = "3", `3` = "6",
-                          `4` = "7", `5` = "8", `6` = "4", `7` = "2", `8` = "5")) # Recode from left to right
+# Plot and save dendrogram
+k6$plot
+ggsave(str_c(output_path, "k_6.png"), k6$plot, 
+       height = 15, width = 25, unit ="cm")
 
-complete.data %>% 
-  mutate(cluster = factor(cutree(dendrogram, k = 8))) %>%
-  mutate(cluster = recode(cluster, `1` = "1", `2` = "3", `3` = "6",
-                          `4` = "7", `5` = "8", `6` = "4", `7` = "2", `8` = "5")) %>% # Recode from left to right
-  group_by(cluster) %>% 
-  tally()
-
-
-# Get the top 10 mean z-score variables per cluster
-
-all.means.k.8 <- means.k.8 %>% 
-  gather("variable", "mean", African:`AOS Value (General)`) 
-top.means.k.8 <- all.means.k.8 %>% 
-  group_by(cluster) %>% 
-  top_n(10, mean) %>% 
-  arrange(cluster, desc(mean))
-
-# Get the bottom 10 mean z-score variables per cluster
-bottom.means.k.8 <- all.means.k.8 %>% 
-  group_by(cluster) %>% 
-  top_n(-10, mean) %>% 
-  arrange(cluster, mean)
-top.vars.k.8 <- vars.k.8 %>% 
-  gather("variable", "cv", African:`AOS Value (General)`) %>% 
-  left_join(all.means.k.8) %>% 
-  group_by() # %>% 
-# mutate(cluster =  recode(cluster, `1` = "1", `2` = "2", `3` = "7", `4` = "8", `5` = "5", `6` = "6", `7` = "3", `8` = "4"))
-
+TODO: write out k6$top_bottom
+  - probably only top
 ## Table showing the top and bottom 3 labels for each cluster in k=8
 k8_labels = list(bottom = {bottom.means.k.8 %>% 
     group_by(cluster) %>% 
@@ -348,20 +278,11 @@ write_file(k8_labels_styled, path = str_c(output_path, 'k8_labels.tex'))
 write_file(k8_labels_styled, path = str_c(paper_path, 'tab_k8_labels.tex'))
 
 
-k.8.plot <- dendrogram %>% 
-  color_labels(k = 8, col = plasma(8, end = .9)) %>% 
-  color_branches(k = 8, col = plasma(8, end = .9)) %>% 
-  set("branches_lwd", c(.8,.8,.8)) %>% 
-  as.ggdend() %>% 
-  ggplot(labels = FALSE, nodes = TRUE) 
-# k.8.plot
-ggsave(str_c(output_path, "k_8.png"), k.8.plot, 
-       height = 15, width = 25, unit ="cm")
-
-
 ## Combined dendograms ---
-cluster_panel = plot_grid(k.2.plot, k.3.plot, k.8.plot, ncol = 1, 
+cluster_panel = plot_grid(k2$plot, k3$plot, k6$plot,
+                          ncol = 1, 
                           labels = 'auto')
+cluster_panel
 ggsave(str_c(output_path, "cluster_panel.png"), cluster_panel, 
        height = 9, width = 6, unit ="in")
 ggsave(str_c(paper_path, "fig_cluster_panel.png"), cluster_panel, 
@@ -372,6 +293,8 @@ ggsave(str_c(paper_path, "fig_cluster_panel.png"), cluster_panel,
 # Note that the clusters in the paper do not have the same numbering as the clusters here;
 # for readability, I numbered the clusters in the paper from left to right instead of merging order.
 # Use university.and.cluster and dendrogram with labels to determine which cluster is which.
+TODO: use joins w/ k2$cut_tree, etc.
+  
 university.and.cluster <- complete.data %>% 
   mutate(k.2 = factor(cutree(dendrogram, k = 2))) %>% 
   mutate(k.3 = factor(cutree(dendrogram, k = 3))) %>% 
@@ -401,6 +324,7 @@ write_csv(university.and.cluster, str_c(data_folder, "01_university_and_cluster.
 write_rds(university.and.cluster, str_c(data_folder, '01_university_and_cluster.Rds'))
 
 ## Table for appendix
+TODO: rework
 cluster_table = university.and.cluster %>% 
   mutate_at(vars(starts_with('k')), as.character) %>% 
   select("Name" = University.Name, `K = 2` = k.2, `K = 3` = k.3, `K = 8` = k.8) %>% 
@@ -413,7 +337,7 @@ cluster_table = university.and.cluster %>%
         booktabs = TRUE, 
         label = 'university.cluster', 
         caption = 'Programs and clusters.  Programs are listed alphabetically within their $k=8$ cluster.')
-  
+
 # print.xtable(cluster_table, tabular.environment = 'longtable',
 #              floating = FALSE,
 #              file = str_c(output_path, 'university_and_cluster.tex'))

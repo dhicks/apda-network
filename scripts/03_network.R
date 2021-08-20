@@ -1,4 +1,4 @@
-TODO: can't use Boston College in example of "counterfactual high prestige"
+# TODO: can't use Boston College in example of "counterfactual high prestige"
 #' ---
 #' output:
 #'     html_document: 
@@ -535,9 +535,9 @@ ggraph(layout_prestigious) +
                         fill = log10(out_centrality)),
                     color = 'white') + 
     geom_edge_parallel(arrow = arrow(length = unit(.01, 'npc')), 
-                  alpha = .25,
-                  strength = 5) +
-    scale_size_continuous(range = c(.5, 3), guide = FALSE) +
+                       alpha = .25,
+                       strength = 5) +
+    scale_size_continuous(range = c(.5, 3), guide = 'none') +
     scale_fill_viridis(name = 'out centrality (log10)') +
     coord_cartesian(xlim = c(-3.5, 5.5), clip = 'on') +
     theme_graph() +
@@ -567,7 +567,7 @@ high_prestige_tab = univ_df %>%
            perm_placement_rate,
            country, 
            # out_centrality
-           ) %>% 
+    ) %>% 
     # arrange(desc(out_centrality)) %>% view()
     arrange(univ_name) %>% 
     mutate(perm_placement_rate = scales::percent_format(accuracy = 2)(perm_placement_rate)) %>% 
@@ -685,34 +685,39 @@ ggplot(univ_df, aes(perm_placements, frac_high_prestige, color = prestige)) +
 plotly::ggplotly()
 
 #' **Finding:** For low-prestige programs, counterfactual prestige seems to depend on the extent of the program's downstream hiring network.  Compare Boston College (19 permanent placements; 40% high prestige) to Leuven (18 permanent placements; 20% high prestige). 
-bc_leuven_net = make_ego_graph(hiring_network, order = 10, 
-                               nodes = c('529', '38'),
-                               mode = 'out') %>% 
+focal_nodes = hiring_network %>% 
+    as_tibble() %>% 
+    filter(univ_name %in% c('Villanova University', 'Katholieke Universiteit Leuven')) %>% 
+    pull(name)
+
+focal_nodes_net = make_ego_graph(hiring_network, order = 10, 
+                                      nodes = focal_nodes,
+                                      mode = 'out') %>% 
     map(as_tbl_graph) %>%
     reduce(bind_graphs) %>% 
     mutate(perm_placements = ifelse(is.na(perm_placements), 0, perm_placements))
 
-bc_leuven_layout = create_layout(bc_leuven_net, 'stress')
+focal_nodes_layout = create_layout(focal_nodes_net, 'stress')
 
-ggraph(bc_leuven_layout) + 
+ggraph(focal_nodes_layout) + 
     geom_node_label(aes(label = univ_name, 
                         size = perm_placements,
                         fill = perm_placements), 
                     color = 'white') + 
     geom_edge_parallel(arrow = arrow(angle = 45,
-                                length = unit(.1, 'inches'),
-                                type = 'closed'),
-                  alpha = .3) +
+                                     length = unit(.1, 'inches'),
+                                     type = 'closed'),
+                       alpha = .3) +
     scale_size_continuous(range = c(1, 5),
                           # na.value = 1,
                           name = 'placements',
-                          guide = FALSE) +
+                          guide = 'none') +
     scale_fill_viridis(na.value = 'black', name = 'permanent\nplacements') +
     theme_graph()
 
-ggsave(str_c(plots_path, 'bc_leuven.png'), 
+ggsave(str_c(plots_path, 'focal_nodes.png'), 
        height = 6, width = 10, dpi = 600, scale = 1.25)
-ggsave(str_c(paper_folder, 'fig_bc_leuven.png'), 
+ggsave(str_c(paper_folder, 'fig_focal_nodes.png'), 
        height = 6, width = 10, dpi = 600, scale = 1.25)
 
 #' Plotting
@@ -800,7 +805,7 @@ ggsave(str_c(paper_folder, 'fig_hairball.png'),
 #     geom_node_point(aes(size = prestigious, 
 #                         # color = as.factor(community))) +
 #                         color = cluster_lvl4)) +
-#     scale_color_brewer(palette = 'Set1', guide = FALSE) +
+#     scale_color_brewer(palette = 'Set1', guide = 'none') +
 #     theme_graph()
 
 ## Separate networks for each cluster
