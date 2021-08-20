@@ -242,40 +242,27 @@ k6$plot
 ggsave(str_c(output_path, "k_6.png"), k6$plot, 
        height = 15, width = 25, unit ="cm")
 
-TODO: write out k6$top_bottom
-  - probably only top
-## Table showing the top and bottom 3 labels for each cluster in k=8
-k8_labels = list(bottom = {bottom.means.k.8 %>% 
-    group_by(cluster) %>% 
-    top_n(-3, mean)}, 
-    top = {top.means.k.8 %>% 
-        group_by(cluster) %>% 
-        top_n(3, mean)}) %>% 
-  bind_rows(.id = 'side') %>% 
-  ungroup() %>% 
-  mutate(side = fct_relevel(side, 'top', 'bottom'), 
-         cluster = as.character(cluster)) %>% 
-  arrange(cluster, side, mean) %>% 
-  select(cluster, side, variable, mean)
+## Table showing the top labels for each cluster in k=6
+k6_labels = filter(k6$top_bottom, side == 'top')
+k6_labels
 
-k8_labels_styled = k8_labels %>% 
+k6_labels_styled = k6_labels %>% 
   arrange(cluster, side, mean) %>% 
-  select(-cluster) %>% 
-  kable(col.names = c('Side', 'Trait', 'Z-score'),
+  select(-cluster, -side) %>% 
+  kable(col.names = c('AOS/keyword', 'Z-score'),
         digits = 2,
         format = 'latex', 
         longtable = TRUE,
         booktabs = TRUE, 
         # table.envir = 'sidewaystable',
-        label = 'k8.labels', 
-        caption = 'Positive and negative traits (AOS and keywords) for $k=8$ clusters. Side indicates whether traits come from the top or bottom of the z-scores for each cluster.') %>% 
+        label = 'k6.labels', 
+        caption = 'Highest-scoring AOS and keywords for $k=6$ clusters.') %>%
   kable_styling() %>% 
-  pack_rows(index=c('Cluster 1' = 6, 'Cluster 2' = 6, 
-                    'Cluster 3' = 6, 'Cluster 4' = 6, 
-                    'Cluster 5' = 6, 'Cluster 6' = 6, 
-                    'Cluster 7' = 6, 'Cluster 8' = 6))
-write_file(k8_labels_styled, path = str_c(output_path, 'k8_labels.tex'))
-write_file(k8_labels_styled, path = str_c(paper_path, 'tab_k8_labels.tex'))
+  pack_rows(index=c('Cluster 1' = 5, 'Cluster 2' = 5, 
+                    'Cluster 3' = 5, 'Cluster 4' = 5, 
+                    'Cluster 5' = 5, 'Cluster 6' = 5))
+write_file(k6_labels_styled, path = str_c(output_path, 'k6_labels.tex'))
+write_file(k6_labels_styled, path = str_c(paper_path, 'tab_k6_labels.tex'))
 
 
 ## Combined dendograms ---
@@ -293,42 +280,49 @@ ggsave(str_c(paper_path, "fig_cluster_panel.png"), cluster_panel,
 # Note that the clusters in the paper do not have the same numbering as the clusters here;
 # for readability, I numbered the clusters in the paper from left to right instead of merging order.
 # Use university.and.cluster and dendrogram with labels to determine which cluster is which.
-TODO: use joins w/ k2$cut_tree, etc.
+university.and.cluster <- university_id_name %>% 
+  inner_join(k2$cut_tree, by = 'University.Name') %>% 
+  left_join(k3$cut_tree, by = 'University.Name') %>% 
+  left_join(k6$cut_tree, by = 'University.Name') %>% 
+  rename(k.2 = cluster.x, k.3 = cluster.y, k.6 = cluster)
   
-university.and.cluster <- complete.data %>% 
-  mutate(k.2 = factor(cutree(dendrogram, k = 2))) %>% 
-  mutate(k.3 = factor(cutree(dendrogram, k = 3))) %>% 
-  mutate(k.8 = factor(cutree(dendrogram, k = 8))) %>% 
-  select(University.ID, 
-         University.Name, 
-         k.2, k.3, k.8) %>% 
-  # Recode from left to right
-  mutate(k.3 = recode(k.3, `1` = "1", `2` = "3", `3` = "2"),
-         k.8 = recode(k.8, `1` = "1", `2` = "3", `3` = "6",
-                      `4` = "7", `5` = "8", 
-                      `6` = "4", `7` = "2", `8` = "5"))
+  # complete.data %>% 
+  # left_join(k2$cut_tree, by = 'University.Name') %>% 
+  # mutate(k.2 = factor(cutree(dendrogram, k = 2))) %>% 
+  # mutate(k.3 = factor(cutree(dendrogram, k = 3))) %>% 
+  # mutate(k.8 = factor(cutree(dendrogram, k = 8))) %>% 
+  # select(University.ID, 
+  #        University.Name, 
+  #        k.2, k.3, k.8) %>% 
+  # # Recode from left to right
+  # mutate(k.3 = recode(k.3, `1` = "1", `2` = "3", `3` = "2"),
+  #        k.8 = recode(k.8, `1` = "1", `2` = "3", `3` = "6",
+  #                     `4` = "7", `5` = "8", 
+  #                     `6` = "4", `7` = "2", `8` = "5"))
+
 labeled_dendro = dendrogram %>% 
   color_labels(k = 8, col = plasma(8, end = .9)) %>% 
   color_branches(k = 8, col = plasma(8, end = .9)) %>% 
   set("branches_lwd", c(.8,.8,.8)) %>% 
   as.ggdend() %>% 
   ggplot(labels = TRUE, horiz = TRUE)
-# labeled_dendro
+labeled_dendro
 ggsave(str_c(output_path, "dendrogram_and_labels.pdf"), 
        labeled_dendro, width = 20, height = 30)
 
 
 ## Output ----
 # Write university and clustering 
-write_csv(university.and.cluster, str_c(data_folder, "01_university_and_cluster.csv"))
-write_rds(university.and.cluster, str_c(data_folder, '01_university_and_cluster.Rds'))
+write_csv(university.and.cluster, file.path(data_folder, 
+                                        "01_university_and_cluster.csv"))
+write_rds(university.and.cluster, file.path(data_folder, 
+                                        '01_university_and_cluster.Rds'))
 
 ## Table for appendix
-TODO: rework
 cluster_table = university.and.cluster %>% 
   mutate_at(vars(starts_with('k')), as.character) %>% 
-  select("Name" = University.Name, `K = 2` = k.2, `K = 3` = k.3, `K = 8` = k.8) %>% 
-  arrange(`K = 2`, `K = 3`, `K = 8`, Name) %>% 
+  select("Name" = University.Name, `K = 2` = k.2, `K = 3` = k.3, `K = 6` = k.6) %>% 
+  arrange(`K = 2`, `K = 3`, `K = 6`, Name) %>% 
   # xtable(type = 'latex', 
   #        caption = 'Programs and clusters.  Programs are listed alphabetically within their $k=8$ cluster.', 
   #        label = 'tab:university_cluster')
@@ -336,7 +330,7 @@ cluster_table = university.and.cluster %>%
         longtable = TRUE, 
         booktabs = TRUE, 
         label = 'university.cluster', 
-        caption = 'Programs and clusters.  Programs are listed alphabetically within their $k=8$ cluster.')
+        caption = 'Programs and clusters.  Programs are listed alphabetically within their $k=6$ cluster.')
 
 # print.xtable(cluster_table, tabular.environment = 'longtable',
 #              floating = FALSE,
