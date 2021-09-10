@@ -15,20 +15,25 @@ paper_folder = '../paper/'
 
 load(str_c(data_folder, '02_parsed.Rdata'))
 univ_df = read_rds(str_c(data_folder, '03_univ_net_stats.rds')) %>% 
-    mutate(cluster = case_when(cluster_3 == '1' ~ 'analytic', 
-                               cluster_3 == '3' ~ 'continental', 
-                               cluster_3 == '2' ~ 'science', 
-                               TRUE ~ 'missing'), 
-           cluster = fct_relevel(cluster, 
-                                 'analytic', 'science', 
-                                 'continental', 'missing'))
+    mutate(cluster = {cluster_label %>% 
+            tolower() %>% 
+            fct_explicit_na(na_level = 'missing') %>% 
+            fct_relevel('analytic', 'science', 'continental', 'missing')})
+               
+           #     case_when(cluster_3 == '1' ~ 'analytic', 
+           #                     cluster_3 == '2' ~ 'continental', 
+           #                     cluster_3 == '3' ~ 'science', 
+           #                     TRUE ~ 'missing'), 
+           # cluster = fct_relevel(cluster, 
+           #                       'analytic', 'science', 
+           #                       'continental', 'missing'))
 
 dist_matrix = read_rds(str_c(data_folder, '01_dist_matrix.Rds'))
 
 ## Cluster x gender ----
 cluster_gender = univ_df %>% 
     filter(!is.na(frac_w), !(cluster == 'missing')) %>% 
-    ggplot(aes(cluster, frac_w, fill = cluster)) +
+    ggplot(aes(cluster, frac_w, fill = cluster, label = univ_name)) +
     geom_beeswarm(shape = 21, size = 2, cex = 4, 
                   alpha = .5) +
     stat_summary(aes(color = cluster), 

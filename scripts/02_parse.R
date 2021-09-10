@@ -156,8 +156,8 @@ univ_location = read_csv(str_c(data_folder,
 cluster_labels = tribble(
     ~ cluster_3, ~ cluster_label, 
     1, 'Analytic', 
-    2, 'Continental',
-    3, 'Science') %>% 
+    2, 'Science', 
+    3, 'Continental') %>% 
     mutate_at(vars(cluster_3), as.character)
 
 clusters_df = read_rds(str_c(data_folder, 

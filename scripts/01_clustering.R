@@ -7,6 +7,7 @@ library(cowplot)
 library(dendextend)
 library(viridis)
 
+library(DT)
 library(xtable)
 library(knitr)
 library(kableExtra)
@@ -215,6 +216,8 @@ k2 = quietly(process_dendro)(complete.data, dendrogram, 2)$result
 # How many programs per cluster
 count(k2$cut_tree, cluster)
 
+datatable(k2$top_bottom)
+
 # Plot and save dendrogram
 k2$plot
 ggsave(str_c(output_path, "k_2.png"), k2$plot, 
@@ -226,6 +229,8 @@ k3 = quietly(process_dendro)(complete.data, dendrogram, 3)$result
 # How many programs per cluster
 count(k3$cut_tree, cluster)
 
+datatable(k3$top_bottom)
+
 # Plot and save dendrogram
 k3$plot
 ggsave(str_c(output_path, "k_3.png"), k3$plot, 
@@ -233,34 +238,33 @@ ggsave(str_c(output_path, "k_3.png"), k3$plot,
 
 # k = 6 ----
 k6 = quietly(process_dendro)(complete.data, dendrogram, 6)$result
+k6$plot
 
 # How many programs per cluster
 count(k6$cut_tree, cluster)
 
 # Plot and save dendrogram
-k6$plot
 ggsave(str_c(output_path, "k_6.png"), k6$plot, 
        height = 15, width = 25, unit ="cm")
 
 ## Table showing the top labels for each cluster in k=6
-k6_labels = filter(k6$top_bottom, side == 'top')
-k6_labels
+datatable(k6$top_bottom)
 
-k6_labels_styled = k6_labels %>% 
-  arrange(cluster, side, mean) %>% 
-  select(-cluster, -side) %>% 
-  kable(col.names = c('AOS/keyword', 'Z-score'),
+k6_labels_styled = k6$top_bottom %>% 
+  arrange(cluster, side, desc(mean)) %>% 
+  select(-cluster) %>% 
+  kable(col.names = c('AOS/keyword', 'Side', 'Z-score'),
         digits = 2,
         format = 'latex', 
         longtable = TRUE,
         booktabs = TRUE, 
         # table.envir = 'sidewaystable',
         label = 'k6.labels', 
-        caption = 'Highest-scoring AOS and keywords for $k=6$ clusters.') %>%
+        caption = 'Highest- and lowest-scoring AOS and keywords for $k=6$ clusters.') %>%
   kable_styling() %>% 
-  pack_rows(index=c('Cluster 1' = 5, 'Cluster 2' = 5, 
-                    'Cluster 3' = 5, 'Cluster 4' = 5, 
-                    'Cluster 5' = 5, 'Cluster 6' = 5))
+  pack_rows(index=c('Cluster 1' = 5*2, 'Cluster 2' = 5*2, 
+                    'Cluster 3' = 5*2, 'Cluster 4' = 5*2, 
+                    'Cluster 5' = 5*2, 'Cluster 6' = 5*2))
 write_file(k6_labels_styled, path = str_c(output_path, 'k6_labels.tex'))
 write_file(k6_labels_styled, path = str_c(paper_path, 'tab_k6_labels.tex'))
 
@@ -301,8 +305,8 @@ university.and.cluster <- university_id_name %>%
   #                     `6` = "4", `7` = "2", `8` = "5"))
 
 labeled_dendro = dendrogram %>% 
-  color_labels(k = 8, col = plasma(8, end = .9)) %>% 
-  color_branches(k = 8, col = plasma(8, end = .9)) %>% 
+  color_labels(k = 6, col = plasma(6, end = .9)) %>% 
+  color_branches(k = 6, col = plasma(6, end = .9)) %>% 
   set("branches_lwd", c(.8,.8,.8)) %>% 
   as.ggdend() %>% 
   ggplot(labels = TRUE, horiz = TRUE)

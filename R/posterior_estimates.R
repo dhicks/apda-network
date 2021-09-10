@@ -17,6 +17,7 @@ posterior_estimates = function(model, prob = .9) {
         ## Program- vs individual-level variables
         mutate(entity = case_when(term == '(Intercept)' & is.na(group) ~ 'intercept', 
                                   str_detect(term, 'prestige') ~ 'program',
+                                  str_detect(term, 'out_centrality') ~ 'program',
                                   str_detect(term, 'gender') ~ 'individual', 
                                   str_detect(term, 'country') ~ 'program', 
                                   term == 'perc_w' ~ 'program', 
@@ -34,6 +35,7 @@ posterior_estimates = function(model, prob = .9) {
         mutate(group = case_when(!is.na(group) ~ as.character(group), 
                                  term == '(Intercept)' ~ 'intercept', 
                                  str_detect(term, 'prestige') ~ 'prestige', 
+                                 str_detect(term, 'out_centrality') ~ 'prestige',
                                  str_detect(term, 'gender') ~ 'gender', 
                                  str_detect(term, 'country') ~ 'country', 
                                  term == 'perc_w' ~ 'continuous', 
