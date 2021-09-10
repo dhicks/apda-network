@@ -84,7 +84,8 @@ univ_df %>%
                    fill = cluster, 
                    # size = prestige
     ), shape = 21) +
-    geom_mark_hull(aes(label = cluster, color = cluster), 
+    geom_mark_hull(aes(label = cluster, color = cluster, fill = cluster), 
+                   alpha = .1,
                    expand = unit(3, 'mm'),
                    concavity = 5, 
                    con.border = 'all'
