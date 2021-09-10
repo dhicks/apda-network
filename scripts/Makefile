@@ -8,7 +8,7 @@ all: cluster parse net regression clanalysis
 clean:
 	rm $(data)/04_model.Rds
 ## Force resampling the model
-force: clean
+force: 
 	Rscript 04_regressions.R --force
 	rm Rplots.pdf
 
