@@ -3,11 +3,13 @@
 #'     html_document: 
 #'         self_contained: yes
 #'         toc: true
+#'         df_print: paged
 #' ---
 
 ## Regression models of placement outcomes
 #+ dependencies -----
 library(tidyverse)
+library(tidylog)
 library(cowplot)
 library(broom)
 library(forcats)
@@ -74,8 +76,13 @@ individual_df = individual_df %>%
     mutate(perc_w = 100*frac_w, 
            perc_high_prestige = 100*frac_high_prestige)
 
+individual_df
+
 ## Variables to consider: aos_category; graduation_year; placement_year; prestige; out_centrality; cluster; community; placing_univ_id; gender; country; perc_w; total_placements
 
+## Overall permanent placement rate
+count(individual_df, permanent) %>% 
+    mutate(share = n / sum(n))
 
 ## Giant pairs plot/correlogram ----
 ## perc_high_prestige, out_centrality, and prestige are all tightly correlated
@@ -287,6 +294,8 @@ pp_check(model, nreps = 200, plotfun = 'ppc_rootogram',
 #+ Posterior estimates for coefficients ----
 ## 90% HPD posterior intervals
 estimates = posterior_estimates(model, prob = .9)
+
+estimates
 
 ## Estimates plot
 estimates %>% 
