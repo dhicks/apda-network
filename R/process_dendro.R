@@ -9,39 +9,39 @@ process_dendro = function(dataf, dendro, k) {
     
     ## Program AOSes, keywords, with clusters
     dataf_cl = dataf %>% 
-        left_join(cut_tree, by = 'University.Name') %>% 
-        select(cluster, University.ID, everything()) %>% 
-        pivot_longer(c(-cluster, -University.ID, 
+        dplyr::left_join(cut_tree, by = 'University.Name') %>% 
+        dplyr::select(cluster, University.ID, everything()) %>% 
+        tidyr::pivot_longer(c(-cluster, -University.ID, 
                        -University.Name), 
                      names_to = 'variable', 
                      values_to = 'value')
     
     ## Mean of each AOS/keyword within each cluster
     means = dataf_cl %>% 
-        group_by(variable) %>% 
-        mutate(value.rs = scale(value)) %>% 
-        group_by(cluster, variable) %>% 
-        summarize(mean = mean(value.rs)) %>% 
-        ungroup()
+        dplyr::group_by(variable) %>% 
+        dplyr::mutate(value.rs = scale(value)) %>% 
+        dplyr::group_by(cluster, variable) %>% 
+        dplyr::summarize(mean = mean(value.rs)) %>% 
+        dplyr::ungroup()
     
     ## Top and bottom AOSs/keywords by mean within each cluster
     top_means = means %>% 
-        group_by(cluster) %>% 
-        top_n(5, mean) %>% 
+        dplyr::group_by(cluster) %>% 
+        dplyr::top_n(5, mean) %>% 
         # arrange(cluster, desc(mean)) %>%
-        mutate(side = 'top') %>% 
-        select(cluster, side, variable, mean) %>% 
-        ungroup()
+        dplyr::mutate(side = 'top') %>% 
+        dplyr::select(cluster, side, variable, mean) %>% 
+        dplyr::ungroup()
     bottom_means = means %>% 
-        group_by(cluster) %>% 
-        top_n(-5, mean) %>% 
+        dplyr::group_by(cluster) %>% 
+        dplyr::top_n(-5, mean) %>% 
         # arrange(cluster, desc(mean)) %>%
-        mutate(side = 'bottom') %>% 
-        select(cluster, side, variable, mean) %>% 
-        ungroup()
-    top_bottom = bind_rows(top_means, bottom_means) %>% 
-        mutate(side = fct_relevel(side, 'top', 'bottom')) %>% 
-        arrange(cluster, side, desc(abs(mean)), variable)
+        dplyr::mutate(side = 'bottom') %>% 
+        dplyr::select(cluster, side, variable, mean) %>% 
+        dplyr::ungroup()
+    top_bottom = dplyr::bind_rows(top_means, bottom_means) %>% 
+        dplyr::mutate(side = fct_relevel(side, 'top', 'bottom')) %>% 
+        dplyr::arrange(cluster, side, desc(abs(mean)), variable)
     # return(top_bottom)
     
     ## Dendrogram plot
