@@ -10,6 +10,7 @@
 #+ dependencies -----
 library(tidyverse)
 library(tidylog)
+library(readxl)
 library(cowplot)
 library(broom)
 library(forcats)
@@ -57,11 +58,16 @@ paper_folder = '../paper/'
 #     geom_label(aes(label = n, fill = n, size = n), color = 'white')
 
 load(str_c(data_folder, '02_parsed.Rdata'))
-univ_df = read_rds(str_c(data_folder, '03_univ_net_stats.rds')) #%>% 
-    # left_join(cluster_distances)
+## Programs with data validated in summer 2021
+## 129
+validated = read_excel(file.path(data_folder, '00_DataChecks2021APDA.xlsx')) |> 
+    filter(`Placement Page?` == 1 | `Dissertation Records/ProQuest?` == 1)
+
+univ_df = read_rds(str_c(data_folder, '03_univ_net_stats.rds'))
 
 individual_df = individual_df %>%
     left_join(univ_df, by = c('placing_univ_id' = 'univ_id')) %>%
+    filter(placing_univ_id %in% validated$`University ID`) %>%
     ## Use the canonical names from univ_df
     select(-placing_univ) %>%
     ## Drop NAs

@@ -41,8 +41,9 @@ university_id_name = read_csv(file.path(data_folder,
   distinct(University.ID, University.Name)
 
 ## Programs with data validated in summer 2021
+## 129
 validated = read_excel(file.path(data_folder, '00_DataChecks2021APDA.xlsx')) |> 
-    filter(`Included?` == 1)
+    filter(`Placement Page?` == 1 | `Dissertation Records/ProQuest?` == 1)
 
 # Load University x Number of Grads per AOS area data
 grads_unfltd <- read_excel(path = file.path(data_folder, 
@@ -59,11 +60,6 @@ grads_unfltd <- read_excel(path = file.path(data_folder,
   mutate(share = n/sum(n)) %>%
   ungroup()
 
-#%>% 
-# pivot_wider(names_from = AOS, 
-#             values_from = n, 
-#             values_fill = 0L)
-
 # 196 universites with AOS area data, before filtering
 grads_unfltd |> 
     count(University.ID) |> 
@@ -73,7 +69,7 @@ grads_unfltd |>
 grads <- grads_unfltd %>%
   filter(University.ID %in% validated$`University ID`)
 
-## 131 programs after filtering
+## 129 programs after filtering
 grads |> 
     count(University.ID) |> 
     nrow()
@@ -138,7 +134,7 @@ keywords.scaled = keywords_unfltd %>%
   select(University.ID, aos, share) #%>% 
   # pivot_wider(names_from = aos, values_from = share, values_fill = 0)
 
-## 128 programs after filtering
+## 127 programs after filtering
 keywords.scaled |> 
     count(University.ID) |> 
     nrow()
@@ -154,6 +150,9 @@ keywords_wide = keywords.scaled |>
 all.data <- inner_join(grads_wide, 
                        keywords_wide, 
                        by = c("University.ID"))
+
+# 127 programs using in cluster analysis
+nrow(all.data)
 
 # Determine which rows don't have complete data 
 # can't use complete.cases because I don't want to eliminate universities with names I don't know
