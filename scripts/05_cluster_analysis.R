@@ -2,6 +2,7 @@ library(tidyverse)
 library(ggforce)
 library(cowplot)
 library(ggbeeswarm)
+library(directlabels)
 library(plotly)
 
 theme_set(theme_minimal())
@@ -16,17 +17,14 @@ paper_folder = '../paper/'
 load(str_c(data_folder, '02_parsed.Rdata'))
 univ_df = read_rds(str_c(data_folder, '03_univ_net_stats.rds')) %>% 
     mutate(cluster = {cluster_label %>% 
-            tolower() %>% 
             fct_explicit_na(na_level = 'missing') %>% 
-            fct_relevel('analytic', 'science', 'continental', 'missing')})
-               
-           #     case_when(cluster_3 == '1' ~ 'analytic', 
-           #                     cluster_3 == '2' ~ 'continental', 
-           #                     cluster_3 == '3' ~ 'science', 
-           #                     TRUE ~ 'missing'), 
-           # cluster = fct_relevel(cluster, 
-           #                       'analytic', 'science', 
-           #                       'continental', 'missing'))
+            fct_relevel('LEMM', 
+                        'ethics',
+                        'science', 
+                        'religion',
+                        'uncommon AOS',
+                        'continental',
+                        'missing')})
 
 dist_matrix = read_rds(str_c(data_folder, '01_dist_matrix.Rds'))
 
@@ -34,7 +32,7 @@ dist_matrix = read_rds(str_c(data_folder, '01_dist_matrix.Rds'))
 cluster_gender = univ_df %>% 
     filter(!is.na(frac_w), !(cluster == 'missing')) %>% 
     ggplot(aes(cluster, frac_w, fill = cluster, label = univ_name)) +
-    geom_beeswarm(shape = 21, size = 2, cex = 4, 
+    geom_beeswarm(shape = 21, size = 2, cex = 3, 
                   alpha = .5) +
     stat_summary(aes(color = cluster), 
                  geom = 'crossbar',
@@ -46,21 +44,43 @@ cluster_gender = univ_df %>%
     scale_y_continuous(labels = scales::percent_format(), 
                        name = 'Share of graduates women') +
     scale_color_viridis_d(option = 'C',
-                         # scale_color_brewer(palette = 'RdYlBu',
-                         name = 'cluster', 
-                         direction = 1,
-                         guide = FALSE) +
-    scale_fill_viridis_d(option = 'C',
                           # scale_color_brewer(palette = 'RdYlBu',
                           name = 'cluster', 
                           direction = 1,
                           guide = FALSE) +
+    scale_fill_viridis_d(option = 'C',
+                         # scale_color_brewer(palette = 'RdYlBu',
+                         name = 'cluster', 
+                         direction = 1,
+                         guide = FALSE) +
     coord_cartesian(clip = 'off')
 cluster_gender
 ggsave(str_c(output_folder, 'cluster_gender.png'), 
-       width = 3, height = 4)
+       width = 6, height = 3)
 ggsave(str_c(paper_folder, 'fig_cluster_gender.png'), 
        width = 3, height = 4)
+
+## Cluster x count by AOS ----
+## Count of AOS, colored by AOS category
+## I was thinking AOS category is automatically assigned from AOS, but doesn't seem to be the case? 
+individual_df %>% 
+    count(aos, aos_category) %>% 
+    arrange(desc(n)) %>% 
+    mutate(aos = fct_reorder(aos, n, .fun = sum, .desc = FALSE)) %>% 
+    ggplot(aes(aos, n, fill = aos_category)) +
+    geom_col(position = 'stack') +
+    coord_flip() +
+    scale_fill_brewer(palette = 'Set2')
+
+## Count of AOS, colored by program cluster
+individual_df %>% 
+    left_join(univ_df, by = c('placing_univ_id' = 'univ_id')) %>% 
+    count(aos, cluster) %>% 
+    mutate(aos = fct_reorder(aos, n, .fun = sum)) %>% 
+    ggplot(aes(aos, n, fill = cluster)) +
+    geom_col(position = 'stack') +
+    coord_flip() +
+    scale_fill_viridis_d(option = 'D', direction = -1)
 
 
 ## Cluster MDS visualization ----
@@ -83,19 +103,27 @@ univ_df %>%
     geom_point(aes(label = univ_name, 
                    fill = cluster, 
                    # size = prestige
-    ), shape = 21) +
-    geom_mark_hull(aes(label = cluster, color = cluster, fill = cluster), 
+    ), shape = 21, 
+    alpha = 1) +
+    geom_mark_hull(aes(label = NULL, color = cluster, fill = cluster), 
                    alpha = .1,
                    expand = unit(3, 'mm'),
+                   label.fontsize = 8,
+                   label.buffer = unit(3, 'mm'),
                    concavity = 5, 
                    con.border = 'all'
-                   ) +
+    ) +
+    geom_dl(aes(label = cluster, fill = cluster), 
+            method = list('outside.ahull', 
+                          'empty.grid', 
+                          'draw.rects')) +
     scale_color_viridis_d(option = 'C',
                           # scale_color_brewer(palette = 'RdYlBu',
                           name = 'cluster', 
                           direction = 1,
                           guide = FALSE) +
     scale_fill_viridis_d(option = 'C', name = 'cluster', 
+                         alpha = .2,
                          direction = 1, guide = FALSE) +
     coord_equal() +
     theme_map()
@@ -105,11 +133,11 @@ mds_interactive
 
 
 ggsave(str_c(output_folder, 'mds.png'), 
-       width = 6, height = 6)
+       width = 8, height = 6)
 ggsave(str_c(paper_folder, 'fig_mds.png'), 
        width = 6, height = 6)
 htmlwidgets::saveWidget(mds_interactive, 
-           str_c(output_folder, 'mds_interactive.html'))
+                        str_c(output_folder, 'mds_interactive.html'))
 
 ## Cluster vs. prestige ----
 ## But I think we plotted this in the network script? 
@@ -147,7 +175,7 @@ plot_grid(cluster_prestige_count, cluster_prestige_prop,
           labels = 'auto')
 
 ggsave(str_c(output_folder, 'cluster_vs_prestige.png'), 
-       width = 8, height = 4)
+       width = 8, height = 4, scale = 1.6)
 ggsave(str_c(paper_folder, 'fig_cluster_vs_prestige.png'), 
        width = 8, height = 4)
 
@@ -164,7 +192,7 @@ cluster_flows_df = individual_df %>%
               suffix = c('_hiring', '_placing')) %>% 
     # filter(!is.na(cluster_placing)) %>% 
     mutate(cluster_placing = fct_explicit_na(cluster_placing)) %>% 
-    count(cluster_hiring, cluster_placing)
+    count(cluster_hiring, cluster_placing, .drop = FALSE)
 
 ## Non-normalized heatmap
 ggplot(cluster_flows_df, aes(cluster_placing, cluster_hiring, fill = n)) +
@@ -251,7 +279,7 @@ hiring_bar = cluster_flows_df %>%
     scale_y_continuous(labels = scales::percent_format())
 hiring_bar
 
-## All placemewnts by placing cluster
+## All placements by placing cluster
 all_bar = cluster_flows_df %>% 
     group_by(cluster_placing) %>% 
     summarize(n = sum(n)) %>% 
@@ -269,7 +297,7 @@ all_bar = cluster_flows_df %>%
                          guide = FALSE) +
     xlab('') +
     scale_y_continuous(labels = scales::percent_format())
-    
+
 plot_grid(alluvial_plot, hiring_bar, all_bar, 
           nrow = 1, rel_widths = c(1, 1, .3), 
           labels = 'auto')
