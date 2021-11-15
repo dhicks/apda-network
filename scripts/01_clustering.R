@@ -267,21 +267,21 @@ k3$plot
 ggsave(str_c(output_path, "k_3.png"), k3$plot, 
        height = 15, width = 25, unit ="cm")
 
-# k = 5 ----
-k5 = process_dendro(complete.data, dendrogram, 5)
-k5$plot
+# k = 6 ----
+k6 = process_dendro(complete.data, dendrogram, 6)
+k6$plot
 
 # How many programs per cluster
-count(k5$cut_tree, cluster)
+count(k6$cut_tree, cluster)
 
 # Plot and save dendrogram
-ggsave(str_c(output_path, "k_5.png"), k5$plot, 
-       height = 15, width = 25, unit ="cm")
+ggsave(str_c(output_path, "k_6.png"), k6$plot, 
+       height = 16, width = 26, unit ="cm")
 
-## Table showing the top labels for each cluster in k=5
-datatable(k5$top_bottom)
+## Table showing the top labels for each cluster in k=6
+datatable(k6$top_bottom)
 
-k5_labels_styled = k5$top_bottom %>% 
+k6_labels_styled = k6$top_bottom %>% 
   arrange(cluster, side, desc(mean)) %>% 
   select(-cluster) %>% 
   kable(col.names = c('AOS/keyword', 'Side', 'Z-score'),
@@ -290,18 +290,18 @@ k5_labels_styled = k5$top_bottom %>%
         longtable = TRUE,
         booktabs = TRUE, 
         # table.envir = 'sidewaystable',
-        label = 'k5.labels', 
-        caption = 'Highest- and lowest-scoring AOS and keywords for $k=5$ clusters.') %>%
+        label = 'k6.labels', 
+        caption = 'Highest- and lowest-scoring AOS and keywords for $k=6$ clusters.') %>%
   kable_styling() %>% 
   pack_rows(index=c('Cluster 1' = 5*2, 'Cluster 2' = 5*2, 
                     'Cluster 3' = 5*2, 'Cluster 4' = 5*2, 
-                    'Cluster 5' = 5*2))
-write_file(k5_labels_styled, path = str_c(output_path, 'k5_labels.tex'))
-write_file(k5_labels_styled, path = str_c(paper_path, 'tab_k5_labels.tex'))
+                    'Cluster 5' = 5*2, 'Cluster 6' = 5*2))
+write_file(k6_labels_styled, path = str_c(output_path, 'k6_labels.tex'))
+write_file(k6_labels_styled, path = str_c(paper_path, 'tab_k6_labels.tex'))
 
 
 ## Combined dendograms ---
-cluster_panel = plot_grid(k2$plot, k3$plot, k5$plot,
+cluster_panel = plot_grid(k2$plot, k3$plot, k6$plot,
                           ncol = 1, 
                           labels = 'auto')
 cluster_panel
@@ -318,8 +318,8 @@ ggsave(str_c(paper_path, "fig_cluster_panel.png"), cluster_panel,
 university.and.cluster <- university_id_name %>% 
   inner_join(k2$cut_tree, by = 'University.Name') %>% 
   left_join(k3$cut_tree, by = 'University.Name') %>% 
-  left_join(k5$cut_tree, by = 'University.Name') %>% 
-  rename(k.2 = cluster.x, k.3 = cluster.y, k.5 = cluster)
+  left_join(k6$cut_tree, by = 'University.Name') %>% 
+  rename(k.2 = cluster.x, k.3 = cluster.y, k.6 = cluster)
   
   # complete.data %>% 
   # left_join(k2$cut_tree, by = 'University.Name') %>% 
@@ -336,8 +336,8 @@ university.and.cluster <- university_id_name %>%
   #                     `6` = "4", `7` = "2", `8` = "5"))
 
 labeled_dendro = dendrogram %>% 
-  color_labels(k = 5, col = plasma(5, end = .9)) %>% 
-  color_branches(k = 5, col = plasma(5, end = .9)) %>% 
+  color_labels(k = 6, col = plasma(6, end = .9)) %>% 
+  color_branches(k = 6, col = plasma(6, end = .9)) %>% 
   set("branches_lwd", c(.8,.8,.8)) %>% 
   as.ggdend() %>% 
   ggplot(labels = TRUE, horiz = TRUE)
@@ -356,8 +356,8 @@ write_rds(university.and.cluster, file.path(data_folder,
 ## Table for appendix
 cluster_table = university.and.cluster %>% 
   mutate_at(vars(starts_with('k')), as.character) %>% 
-  select("Name" = University.Name, `K = 2` = k.2, `K = 3` = k.3, `K = 5` = k.5) %>% 
-  arrange(`K = 2`, `K = 3`, `K = 5`, Name) %>% 
+  select("Name" = University.Name, `K = 2` = k.2, `K = 3` = k.3, `K = 6` = k.6) %>% 
+  arrange(`K = 2`, `K = 3`, `K = 6`, Name) %>% 
   # xtable(type = 'latex', 
   #        caption = 'Programs and clusters.  Programs are listed alphabetically within their $k=8$ cluster.', 
   #        label = 'tab:university_cluster')
