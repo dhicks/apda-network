@@ -157,7 +157,7 @@ cluster_labels = tribble(
     ~ cluster_5, ~ cluster_label, 
     1, 'LEMM', 
     2, 'science', 
-    3, 'religion',
+    3, 'history',
     4, 'continental',
     5, 'applied') %>% 
     mutate_at(vars(cluster_5), as.character)

@@ -19,11 +19,10 @@ univ_df = read_rds(str_c(data_folder, '03_univ_net_stats.rds')) %>%
     mutate(cluster = {cluster_label %>% 
             fct_explicit_na(na_level = 'missing') %>% 
             fct_relevel('LEMM', 
-                        'ethics',
                         'science', 
                         'religion',
-                        'uncommon AOS',
                         'continental',
+                        'applied',
                         'missing')})
 
 dist_matrix = read_rds(str_c(data_folder, '01_dist_matrix.Rds'))
@@ -102,7 +101,7 @@ univ_df %>%
     ggplot(aes(V1, V2)) +
     geom_point(aes(label = univ_name, 
                    fill = cluster, 
-                   # size = prestige
+                   # size = total_placements
     ), shape = 21, 
     alpha = 1) +
     geom_mark_hull(aes(label = NULL, color = cluster, fill = cluster), 
@@ -121,10 +120,10 @@ univ_df %>%
                           # scale_color_brewer(palette = 'RdYlBu',
                           name = 'cluster', 
                           direction = 1,
-                          guide = FALSE) +
+                          guide = 'none') +
     scale_fill_viridis_d(option = 'C', name = 'cluster', 
                          alpha = .2,
-                         direction = 1, guide = FALSE) +
+                         direction = 1, guide = 'none') +
     coord_equal() +
     theme_map()
 
