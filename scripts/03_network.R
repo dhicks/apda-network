@@ -458,7 +458,7 @@ cluster_vars = univ_df %>%
     names()
 
 univ_df %>% 
-    filter(!is.na(community), !is.na('cluster_lvl4'))
+    filter(!is.na(community), !is.na('cluster_label'))
 
 
 #' **Finding: There is no correlation between semantic clusters and topological communities.**
@@ -591,6 +591,14 @@ univ_df %>%
     ggplot(aes(cluster_label, color = prestige)) + 
     geom_point(stat = 'count') +
     geom_line(aes(group = prestige), stat = 'count')
+univ_df |> 
+    filter(!is.na(cluster_label)) |> 
+    count(cluster_label, prestige) |> 
+    group_by(cluster_label) |> 
+    mutate(share = n / sum(n)) |> 
+    ungroup() |> 
+    ggplot(aes(cluster_label, share, fill = prestige)) +
+    geom_col(position = 'stack')
 ## High-prestige are mostly in the largest community
 univ_df %>%
     filter(!is.na(community)) %>%
@@ -637,7 +645,7 @@ plotly::ggplotly()
 univ_df %>%
     group_by(prestige) %>%
     summarize_at(vars(perm_placement_rate), 
-                 funs(median, max, min), na.rm = TRUE)
+                 lst(median, max, min), na.rm = TRUE)
 
 
 ## prestige stability ----
