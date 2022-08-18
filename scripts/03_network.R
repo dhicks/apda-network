@@ -1,4 +1,3 @@
-# TODO: can't use Boston College in example of "counterfactual high prestige"
 #' ---
 #' output:
 #'     html_document: 
@@ -217,12 +216,14 @@ ggplot(as_tibble(hiring_network), aes(out_centrality)) +
                        breaks = scales::trans_breaks("log10", function(x) 10^x),
                        labels = scales::trans_format("log10", scales::math_format(10^.x))) +
     facet_zoom(x = out_centrality > 10^-12, 
-               ylim = c(0, 20),
+               ylim = c(0, 30),
+               # ylim = c(log10(1), log10(100)),
                # ylim = c(0, .02),
                show.area = FALSE, 
                shrink = TRUE,
                zoom.size = .3,
                horizontal = FALSE) +
+    # scale_y_log10() +
     theme_bw()
 ggsave(str_c(plots_path, 'out_centrality.png'), 
        height = 3, width = 6)

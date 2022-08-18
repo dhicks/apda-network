@@ -128,7 +128,7 @@ keywords.scaled = keywords_unfltd %>%
   pivot_longer(-University.ID, names_to = 'aos', values_to = 'responses') %>% 
   filter(responses != 0L, 
          University.ID %in% validated$`University ID`) %>% 
-  anti_join(keywords_to_drop, by = 'aos') %>% 
+  anti_join(keywords_to_drop, by = 'aos') %>%
   inner_join(keyword_resp_count, by = 'University.ID') %>% 
   mutate(share = responses / total_resp) %>% 
   select(University.ID, aos, share) #%>% 
@@ -208,12 +208,18 @@ silhouette_k = function(k, clusters, distances) {
     as('matrix') %>% 
     as_tibble()
 }
+## Silhouette across all values of k of interest
+silhouette_all_k = function(clusters, distances, max_k = 10) {
+    2:max_k |> 
+        set_names() |> 
+        map_dfr(silhouette_k, 
+                clusters, 
+                distances, 
+                .id = 'k') |> 
+        dplyr::mutate(k = as.integer(k))
+}
 
-all.silhouettes = 2:10 %>% 
-  set_names() %>% 
-  map_dfr(silhouette_k, cluster.complete, distance.matrix, 
-          .id = 'k') %>% 
-  mutate(k = as.integer(k))
+all.silhouettes = silhouette_all_k(cluster.complete, distance.matrix)
 
 sil.plot = ggplot(all.silhouettes, 
                   aes(x = k, y = sil_width, 
