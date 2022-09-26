@@ -70,6 +70,8 @@ individual_df = individual_df %>%
     filter(placing_univ_id %in% validated$`University ID`) %>%
     ## Use the canonical names from univ_df
     select(-placing_univ) %>%
+    ## Don't include prestige scores
+    select(-out_centrality) %>%
     ## Drop NAs
     # filter(complete.cases(.))
     filter_at(vars('permanent', 'aos_category', 
@@ -84,24 +86,25 @@ individual_df = individual_df %>%
 
 individual_df
 
-## Variables to consider: aos_category; graduation_year; placement_year; prestige; out_centrality; cluster; community; placing_univ_id; gender; country; perc_w; total_placements
+## Variables to consider: aos_category; graduation_year; placement_year; prestige; cluster; community; placing_univ_id; gender; country; perc_w; total_placements
 
 ## Overall permanent placement rate
 count(individual_df, permanent) %>% 
     mutate(share = n / sum(n))
 
 ## Giant pairs plot/correlogram ----
-## perc_high_prestige, out_centrality, and prestige are all tightly correlated
+## perc_high_prestige and prestige are all tightly correlated
 ## All other pairs have low to moderate correlation
 individual_df %>% 
     select(permanent, aos_category, aos_diversity, perc_high_prestige,
            graduation_year, placement_year, prestige, 
-           in_centrality, out_centrality, #community, 
+           in_centrality, #out_centrality, #community, 
            cluster, #average_distance,
            gender, country, perc_w, 
            total_placements) %>% 
     mutate_if(negate(is.numeric), function(x) as.integer(as.factor(x))) %>% 
-    mutate_at(vars(in_centrality, out_centrality), log10) %>% 
+    mutate_at(vars(in_centrality, #out_centrality
+                   ), log10) %>% 
     # GGally::ggpairs()
     cor() %>% 
     as_tibble(rownames = 'Var1') %>% 

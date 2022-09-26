@@ -240,7 +240,6 @@ ggplot(as_tibble(hiring_network),
            text = univ_name)) +
     geom_jitter() + 
     scale_x_log10() + scale_y_log10()
-plotly::ggplotly()
 
 # ## Check stability of centrality calculation
 # iterated_centrality = 1:500 %>%
@@ -299,7 +298,6 @@ ggplot(as_tibble(hiring_network),
        aes(total_placements, log10(out_centrality))) +
     geom_point(aes(text = univ_name)) +
     geom_smooth()
-plotly::ggplotly()
 
 # univ_df %>%
 #     mutate(out_centrality_log = log10(out_centrality)) %>%
@@ -324,7 +322,6 @@ ggplot(as_tibble(hiring_network),
        aes(log10(out_centrality), perm_placement_rate)) +
     geom_point(aes(text = univ_name)) +
     geom_smooth(method = 'lm')
-plotly::ggplotly()
 
 as_tibble(hiring_network) %>%
     select(total_placements, perm_placement_rate, 
@@ -452,7 +449,7 @@ univ_df %>%
     ggplot(aes(n)) +
     geom_bar(aes(text = n)) +
     scale_x_continuous(name = 'Community size (# programs)')
-plotly::ggplotly()
+
 
 cluster_vars = univ_df %>% 
     select(matches('cluster')) %>% 
@@ -641,7 +638,7 @@ ggsave(str_c(plots_path, 'prestige_placement.png'),
        width = 8, height = 4)
 ggsave(str_c(paper_folder, 'fig_placement.png'), 
        width = 8, height = 4)
-plotly::ggplotly()
+
 
 univ_df %>%
     group_by(prestige) %>%
@@ -686,12 +683,12 @@ univ_df = left_join(univ_df, permutations)
 ggplot(univ_df, aes(log10(out_centrality), frac_high_prestige)) + 
     geom_point(aes(text = univ_name)) +
     geom_smooth(method = 'lm')
-plotly::ggplotly()
+
 
 ggplot(univ_df, aes(perm_placements, frac_high_prestige, color = prestige)) + 
     geom_point(aes(text = univ_name)) +
     geom_smooth(method = 'lm')
-plotly::ggplotly()
+
 
 #' **Finding:** For low-prestige programs, counterfactual prestige seems to depend on the extent of the program's downstream hiring network.  Compare Boston College (19 permanent placements; 40% high prestige) to Leuven (18 permanent placements; 20% high prestige). 
 focal_nodes = hiring_network %>% 
